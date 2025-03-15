@@ -73,7 +73,4 @@ router.post('/groups/:groupId/members',
 router.delete('/groups/:groupId/members/:memberId', auth, groupController.removeMember);
 router.delete('/groups/:groupId', auth, groupController.deleteGroup);
 
-// Expense routes
-router.use('/expenses', expenseRoutes);
-
 module.exports = router;

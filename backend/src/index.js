@@ -6,27 +6,27 @@ const models = require('./models');
 
 const app = express();
 
-// CORS configuration
-const corsOptions = {
-  // Add '*' to allow testing from any origin (for development only)
-  origin: [
-    'https://splitzy-frontend-kannan-m-kannan-m-projects.vercel.app',
-    'https://splitzy-frontend.vercel.app',
-    'http://localhost:5173', // For local development
-    '*' // Allow requests from any origin (temporary for testing)
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version'],
-  credentials: true,
-  optionsSuccessStatus: 200 // This is important for handling OPTIONS preflight
-};
+// Only apply CORS in development environment
+// In production, we'll use Vercel's CORS configuration
+if (process.env.NODE_ENV !== 'production') {
+  const corsOptions = {
+    origin: [
+      'https://splitzy-frontend-kannan-m-kannan-m-projects.vercel.app',
+      'https://splitzy-frontend.vercel.app',
+      'http://localhost:5173',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version'],
+    credentials: true,
+    optionsSuccessStatus: 200
+  };
+  
+  app.use(cors(corsOptions));
+  // Handle OPTIONS preflight requests for all routes
+  app.options('*', cors(corsOptions));
+}
 
-// Middleware
-app.use(cors(corsOptions));
 app.use(express.json());
-
-// Handle OPTIONS preflight requests for all routes
-app.options('*', cors(corsOptions));
 
 // Database configuration
 const sequelize = new Sequelize(process.env.DATABASE_URL || 'postgres://localhost:5432/expense_sharing', {
@@ -60,7 +60,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
