@@ -4,12 +4,12 @@ An open-source expense-sharing application similar to Splitwise that helps users
 
 ## Features
 
-### Core Features (MVP)
+### Implemented Features ✅
 
 #### User Management
 - User registration and login
 - Profile management
-- Friend/contact management
+- Friend/contact management with request system
 
 #### Group Management
 - Create and manage groups
@@ -17,46 +17,59 @@ An open-source expense-sharing application similar to Splitwise that helps users
 - Group categories (Home, Trip, Other)
 
 #### Expense Management
-- Add expenses
-- Split expenses equally or by exact amounts
-- Expense categories
-- Single currency support (USD)
+- Add/edit expenses with date picker
+- Split expenses equally between friends
+- Track expense history
 
 #### Debt Calculation
-- Debt calculation between group members
-- Payment suggestions
-- Balance tracking
+- Friend-level balance calculation
+- Detailed transaction history between friends
+- Payment suggestions for settling debts
+- Visual indicators for balances (who owes whom)
 
-#### Settlement
-- Record payments
-- Mark expenses as settled
-- Payment history
+### Coming Soon 🚀
 
-#### Activity Tracking
-- Activity feed
-- Expense history
-- Basic notifications
+#### Group Expense Integration
+- Adding expenses to specific groups
+- Splitting expenses among group members
+- Group-level balance calculations
+
+#### Settlement Feature
+- Record payments between users
+- Settlement history
+- Mark debts as settled
+
+#### Advanced Expense Features
+- Expense categories and tagging
+- Recurring expenses
+- Receipt image upload
+
+#### Activity and Notifications
+- Activity feed with recent actions
+- Email notifications
+- In-app notifications
 
 ## Tech Stack
 
 ### Frontend
 - React with TypeScript
-- Responsive UI
-- State management
-- Form validations
+- Material UI components
+- React Router for navigation
+- Context API for state management
+- Axios for API requests
 
 ### Backend
 - Node.js with Express
-- RESTful API
-- Authentication system
-- Error handling
+- RESTful API architecture
+- JWT authentication
+- Sequelize ORM
 
 ### Database
 - PostgreSQL
 
 ### Security
-- Authentication
-- Data encryption
+- Authentication with JWT
+- Password encryption
 - Input validation
 
 ## Getting Started
@@ -68,19 +81,32 @@ An open-source expense-sharing application similar to Splitwise that helps users
 
 ### Installation
 
-Instructions will be added once the initial setup is complete.
+#### Backend Setup
+1. Navigate to the backend directory: `cd backend`
+2. Install dependencies: `npm install`
+3. Set up environment variables (create a `.env` file with required configuration)
+4. Start the development server: `npm run dev`
+
+#### Frontend Setup
+1. Navigate to the frontend directory: `cd frontend`
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+4. Access the application at `http://localhost:5173`
 
 ## Development
 
-Instructions for setting up the development environment will be added.
-
-## Testing
-
-Information about running tests will be added.
+The project follows a feature-based development approach. Current focus areas:
+1. Group expense integration
+2. Settlement tracking system
+3. Advanced filtering and expense categorization
 
 ## Contributing
 
-Guidelines for contributing will be added.
+We welcome contributions! Please follow these steps:
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes
+4. Submit a pull request
 
 ## License
 
