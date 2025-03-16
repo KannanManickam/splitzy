@@ -27,12 +27,18 @@ import {
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { friendService } from '../../services/friend';
 import LoadingState from '../LoadingState';
+import FriendBalance from './FriendBalance';
+import { getFriendBalances } from '../../services/balance';
 
 interface Friend {
   id: string;
   name: string;
   email: string;
   status: 'pending' | 'accepted' | 'requested';
+}
+
+interface FriendWithBalance extends Friend {
+  balance?: number;
 }
 
 interface NotificationState {
@@ -45,14 +51,16 @@ const Friends = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [searchEmail, setSearchEmail] = useState('');
   const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
-  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friends, setFriends] = useState<FriendWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState>({
     open: false,
     message: '',
     severity: 'success'
   });
-
+  const [selectedFriend, setSelectedFriend] = useState<FriendWithBalance | null>(null);
+  const [showBalance, setShowBalance] = useState(false);
+  
   useEffect(() => {
     loadFriendsData();
   }, []);
@@ -64,14 +72,31 @@ const Friends = () => {
         friendService.getPendingRequests(),
         friendService.getSentRequests(),
       ]);
-
+      
       const formattedFriends = [
         ...friendsList.map(friend => ({ ...friend, status: 'accepted' as const })),
         ...pendingRequests.map(request => ({ ...request, status: 'pending' as const })),
         ...sentRequests.map(request => ({ ...request, status: 'requested' as const })),
       ];
-
-      setFriends(formattedFriends);
+      
+      // Get balances for all friends
+      try {
+        const balances = await getFriendBalances();
+        
+        // Merge balances with friends
+        const friendsWithBalances = formattedFriends.map(friend => {
+          const balanceInfo = balances.find(b => b.id === friend.id);
+          return {
+            ...friend,
+            balance: balanceInfo?.balance
+          };
+        });
+        
+        setFriends(friendsWithBalances);
+      } catch (balanceErr) {
+        console.error('Error loading balances:', balanceErr);
+        setFriends(formattedFriends);
+      }
     } catch (err) {
       console.error('Error loading friends:', err);
       setNotification({
@@ -142,6 +167,20 @@ const Friends = () => {
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+    setShowBalance(false);
+    setSelectedFriend(null);
+  };
+
+  const handleFriendClick = (friend: FriendWithBalance) => {
+    if (friend.status === 'accepted') {
+      setSelectedFriend(friend);
+      setShowBalance(true);
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowBalance(false);
+    setSelectedFriend(null);
   };
 
   const getFilteredFriends = () => {
@@ -170,10 +209,44 @@ const Friends = () => {
     }
   };
 
+  const getBalanceText = (balance?: number) => {
+    if (balance === undefined) return null;
+    if (balance === 0) return "You're all settled up";
+    if (balance > 0) return `Owes you $${balance.toFixed(2)}`;
+    return `You owe $${Math.abs(balance).toFixed(2)}`;
+  };
+
+  const getBalanceColor = (balance?: number) => {
+    if (balance === undefined) return 'text.secondary';
+    if (balance === 0) return 'text.secondary';
+    if (balance > 0) return 'success.main';
+    return 'error.main';
+  };
+
   if (loading) {
     return (
       <Container maxWidth="md">
         <LoadingState type="circular" message="Loading friends..." />
+      </Container>
+    );
+  }
+
+  if (showBalance && selectedFriend) {
+    return (
+      <Container maxWidth="md">
+        <Box sx={{ mb: 3 }}>
+          <Button 
+            variant="text" 
+            onClick={handleBackToList}
+            sx={{ textTransform: 'none', fontWeight: 500 }}
+          >
+            ← Back to friends
+          </Button>
+        </Box>
+        <FriendBalance 
+          friendId={selectedFriend.id} 
+          friendName={selectedFriend.name} 
+        />
       </Container>
     );
   }
@@ -216,7 +289,6 @@ const Friends = () => {
           <PersonAddIcon />
         </IconButton>
       </Box>
-
       <Paper
         elevation={0}
         sx={{
@@ -258,7 +330,6 @@ const Friends = () => {
           <Tab label="Pending Requests" />
           <Tab label="Sent Requests" />
         </Tabs>
-
         <List sx={{ p: 0 }}>
           {getFilteredFriends().map((friend, index) => (
             <Box key={friend.id}>
@@ -270,8 +341,10 @@ const Friends = () => {
                   '&:hover': { 
                     bgcolor: 'rgba(0,0,0,0.02)',
                     transform: 'translateX(8px)'
-                  }
+                  },
+                  cursor: friend.status === 'accepted' ? 'pointer' : 'default'
                 }}
+                onClick={() => handleFriendClick(friend)}
               >
                 <ListItemAvatar>
                   <Avatar 
@@ -300,9 +373,22 @@ const Friends = () => {
                     </Box>
                   }
                   secondary={
-                    <Typography variant="body2" color="text.secondary">
-                      {friend.email}
-                    </Typography>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {friend.email}
+                      </Typography>
+                      {friend.status === 'accepted' && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500, 
+                            color: getBalanceColor(friend.balance)
+                          }}
+                        >
+                          {getBalanceText(friend.balance)}
+                        </Typography>
+                      )}
+                    </Box>
                   }
                   sx={{ ml: 2 }}
                 />
@@ -312,7 +398,10 @@ const Friends = () => {
                       variant="contained"
                       size="small"
                       color="primary"
-                      onClick={() => handleAcceptRequest(friend.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptRequest(friend.id);
+                      }}
                       sx={{
                         borderRadius: 2,
                         textTransform: 'none',
@@ -330,7 +419,10 @@ const Friends = () => {
                       variant="outlined"
                       size="small"
                       color="error"
-                      onClick={() => handleRejectRequest(friend.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectRequest(friend.id);
+                      }}
                       sx={{
                         borderRadius: 2,
                         textTransform: 'none',
@@ -359,7 +451,6 @@ const Friends = () => {
           )}
         </List>
       </Paper>
-
       <Dialog open={isAddFriendOpen} onClose={() => setIsAddFriendOpen(false)}>
         <DialogTitle>Add Friend</DialogTitle>
         <DialogContent>
@@ -381,7 +472,6 @@ const Friends = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}

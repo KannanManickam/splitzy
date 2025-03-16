@@ -6,6 +6,7 @@ const groupController = require('../controllers/groupController');
 const expenseController = require('../controllers/expenseController');
 const friendRoutes = require('./friendRoutes');
 const expenseRoutes = require('./expenseRoutes');
+const balanceRoutes = require('./balanceRoutes');
 
 const router = express.Router();
 
@@ -14,6 +15,9 @@ router.use('/friends', friendRoutes);
 
 // Expense routes
 router.use('/expenses', expenseRoutes);
+
+// Balance routes
+router.use('/balances', balanceRoutes);
 
 // User routes
 router.post('/users/register',

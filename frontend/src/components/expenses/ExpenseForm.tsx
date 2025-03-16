@@ -27,6 +27,10 @@ import {
   useTheme,
   Divider
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import dayjs from 'dayjs';
 import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
@@ -117,6 +121,15 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }));
   };
 
+  const handleDateChange = (date: dayjs.Dayjs | null) => {
+    if (date) {
+      setFormData((prev) => ({
+        ...prev,
+        date: date.format('YYYY-MM-DD'),
+      }));
+    }
+  };
+
   const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -142,6 +155,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       ...friends
     ];
   }, [friends, user]);
+
+  // Parse date string to dayjs object for DatePicker
+  const parsedDate = formData.date ? dayjs(formData.date) : dayjs();
 
   return (
     <Dialog 
@@ -185,9 +201,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-
       <Divider />
-
       <form onSubmit={handleSubmit}>
         <DialogContent sx={{ p: 3 }}>
           <Stack spacing={3}>
@@ -206,7 +220,6 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 ),
               }}
             />
-
             <TextField
               required
               label="Amount"
@@ -224,25 +237,28 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 ),
               }}
             />
-
-            <TextField
-              required
-              label="Date"
-              name="date"
-              type="date"
-              value={formData.date}
-              onChange={handleChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EventIcon sx={{ color: 'primary.main' }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
+            
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Date"
+                value={parsedDate}
+                onChange={handleDateChange}
+                slotProps={{
+                  textField: {
+                    required: true,
+                    fullWidth: true,
+                    InputProps: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EventIcon sx={{ color: 'primary.main' }} />
+                        </InputAdornment>
+                      ),
+                    }
+                  }
+                }}
+              />
+            </LocalizationProvider>
+            
             <FormControl fullWidth required>
               <InputLabel>Paid By</InputLabel>
               <Select
@@ -301,7 +317,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 ))}
               </Select>
             </FormControl>
-
+            
             <FormControl fullWidth required>
               <InputLabel>Split Between</InputLabel>
               <Select
@@ -408,9 +424,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             </FormControl>
           </Stack>
         </DialogContent>
-
         <Divider />
-
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
           <Button 
             onClick={onClose}

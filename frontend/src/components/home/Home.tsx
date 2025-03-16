@@ -34,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { groupService } from '../../services/group';
 import { expenseService } from '../../services/expense';
 import LoadingState from '../LoadingState';
+import PaymentSuggestions from './PaymentSuggestions';
 
 interface DashboardData {
   totalExpenses: number;
@@ -318,6 +319,9 @@ export default function Home() {
             </Box>
 
             <Box sx={{ maxWidth: "xl", marginLeft: 0, px: 3, mb: 6 }}>
+              {/* Payment Suggestions Section */}
+              <PaymentSuggestions />
+              
               <Grid container spacing={4} justifyContent="flex-start" alignItems="flex-start">
                 {/* Active Groups Section */}
                 <Grid item xs={12} md={6}>
