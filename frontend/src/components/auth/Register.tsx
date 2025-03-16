@@ -85,7 +85,7 @@ export default function Register() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${theme.palette.secondary.light} 0%, ${theme.palette.secondary.main} 100%)`,
+        background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
         padding: 2
       }}
     >
@@ -119,7 +119,7 @@ export default function Register() {
                 mb: 3,
                 p: 2,
                 borderRadius: '50%',
-                bgcolor: 'secondary.main',
+                bgcolor: 'primary.main',
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -135,7 +135,7 @@ export default function Register() {
               sx={{ 
                 mb: 1, 
                 fontWeight: 700,
-                background: `linear-gradient(45deg, ${theme.palette.secondary.main}, ${theme.palette.primary.main})`,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                 backgroundClip: 'text',
                 textFillColor: 'transparent',
                 WebkitBackgroundClip: 'text',
@@ -310,7 +310,7 @@ export default function Register() {
                 type="submit"
                 fullWidth
                 variant="contained"
-                color="secondary"
+                color="primary"
                 sx={{ 
                   mt: 4,
                   mb: 2,
@@ -320,11 +320,11 @@ export default function Register() {
                   textTransform: 'none',
                   fontSize: '1.1rem',
                   fontWeight: 600,
-                  background: `linear-gradient(45deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
                   transition: 'all 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-1px)',
-                    boxShadow: `0 8px 20px -6px ${theme.palette.secondary.main}80`
+                    boxShadow: `0 8px 20px -6px ${theme.palette.primary.main}80`
                   }
                 }}
                 disabled={isLoading}
