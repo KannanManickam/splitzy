@@ -10,6 +10,13 @@
     {
       "src": "/(.*)",
       "methods": ["OPTIONS"],
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "https://splitzy-frontend.vercel.app"
+        }
+      ],
       "headers": {
         "Access-Control-Allow-Origin": "https://splitzy-frontend.vercel.app",
         "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
@@ -20,7 +27,63 @@
       "status": 204
     },
     {
+      "src": "/(.*)",
+      "methods": ["OPTIONS"],
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "http://localhost:5173"
+        }
+      ],
+      "headers": {
+        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
+      },
+      "status": 204
+    },
+    {
       "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "https://splitzy-frontend.vercel.app"
+        }
+      ],
+      "headers": {
+        "Access-Control-Allow-Origin": "https://splitzy-frontend.vercel.app",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "dest": "/src/index.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "http://localhost:5173"
+        }
+      ],
+      "headers": {
+        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "dest": "/src/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "https://splitzy-frontend.vercel.app"
+        }
+      ],
       "headers": {
         "Access-Control-Allow-Origin": "https://splitzy-frontend.vercel.app",
         "Access-Control-Allow-Credentials": "true"
@@ -29,10 +92,21 @@
     },
     {
       "src": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "origin",
+          "value": "http://localhost:5173"
+        }
+      ],
       "headers": {
-        "Access-Control-Allow-Origin": "https://splitzy-frontend.vercel.app",
+        "Access-Control-Allow-Origin": "http://localhost:5173",
         "Access-Control-Allow-Credentials": "true"
       },
+      "dest": "/src/index.js"
+    },
+    {
+      "src": "/(.*)",
       "dest": "/src/index.js"
     }
   ]
