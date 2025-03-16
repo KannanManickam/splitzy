@@ -12,11 +12,9 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Container,
   Grid,
   Divider,
   Avatar,
-  LinearProgress,
   Stack,
   Tooltip,
   useTheme,
@@ -35,6 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { groupService } from '../../services/group';
 import { expenseService } from '../../services/expense';
+import LoadingState from '../LoadingState';
 
 interface DashboardData {
   totalExpenses: number;
@@ -259,7 +258,7 @@ export default function Home() {
       >
         <Toolbar />
         {loading ? (
-          <LinearProgress />
+          <LoadingState type="pulse" message="Loading dashboard data..." height="500px" />
         ) : (
           <>
             {/* Hero Section with Total Balance */}
@@ -272,8 +271,8 @@ export default function Home() {
                 mb: 4,
               }}
             >
-              <Container maxWidth="xl">
-                <Grid container spacing={4} alignItems="center">
+              <Box sx={{ maxWidth: "xl", marginLeft: 0, px: 2 }}>
+                <Grid container spacing={4} alignItems="flex-start">
                   <Grid item xs={12} md={6}>
                     <Typography variant="h3" fontWeight={700} gutterBottom>
                       {formatCurrency(dashboardData.totalBalance)}
@@ -315,11 +314,11 @@ export default function Home() {
                     </Stack>
                   </Grid>
                 </Grid>
-              </Container>
+              </Box>
             </Box>
 
-            <Container maxWidth="xl" sx={{ mb: 6 }}>
-              <Grid container spacing={4}>
+            <Box sx={{ maxWidth: "xl", marginLeft: 0, px: 3, mb: 6 }}>
+              <Grid container spacing={4} justifyContent="flex-start" alignItems="flex-start">
                 {/* Active Groups Section */}
                 <Grid item xs={12} md={6}>
                   <Box
@@ -613,7 +612,7 @@ export default function Home() {
                   </Box>
                 </Grid>
               </Grid>
-            </Container>
+            </Box>
           </>
         )}
       </Box>

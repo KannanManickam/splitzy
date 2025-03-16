@@ -33,8 +33,6 @@ axiosInstance.interceptors.response.use(
       // Handle unauthorized access
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Make sure this matches your frontend route structure
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

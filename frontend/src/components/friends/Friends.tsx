@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { friendService } from '../../services/friend';
+import LoadingState from '../LoadingState';
 
 interface Friend {
   id: string;
@@ -172,7 +173,7 @@ const Friends = () => {
   if (loading) {
     return (
       <Container maxWidth="md">
-        <Typography>Loading...</Typography>
+        <LoadingState type="circular" message="Loading friends..." />
       </Container>
     );
   }

@@ -3,6 +3,7 @@ import { expenseService, Expense } from '../../services/expense';
 import ExpenseForm from './ExpenseForm';
 import type { ExpenseFormData } from './ExpenseForm';
 import { useAuth } from '../../contexts/AuthContext';
+import LoadingState from '../LoadingState';
 import {
   Box,
   Typography,
@@ -34,6 +35,7 @@ interface ExtendedExpenseFormData extends ExpenseFormData {
 const ExpenseList: React.FC = () => {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true); // Add loading state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<ExtendedExpenseFormData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -75,10 +77,14 @@ const ExpenseList: React.FC = () => {
 
   const loadExpenses = async () => {
     try {
+      setLoading(true); // Set loading to true before fetching
       const data = await expenseService.getExpenses();
       setExpenses(data);
     } catch (err) {
       console.error('Error loading expenses:', err);
+      showNotification('Failed to load expenses', 'error');
+    } finally {
+      setLoading(false); // Set loading to false after fetching
     }
   };
 
@@ -198,7 +204,9 @@ const ExpenseList: React.FC = () => {
         </Button>
       </Box>
       
-      {expenses.length > 0 ? (
+      {loading ? (
+        <LoadingState type="pulse" message="Loading expenses..." height="400px" />
+      ) : expenses.length > 0 ? (
         <TableContainer component={Paper} sx={{ boxShadow: 1, borderRadius: 0, mt: 1 }}>
           <Table>
             <TableHead>

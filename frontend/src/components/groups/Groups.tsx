@@ -34,10 +34,12 @@ import GroupForm from './GroupForm';
 import GroupDetails from './GroupDetails';
 import { groupService, Group } from '../../services/group';
 import { useAuth } from '../../contexts/AuthContext';
+import LoadingState from '../LoadingState';
 
 const Groups = () => {
   const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true); // Add loading state
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -59,11 +61,14 @@ const Groups = () => {
 
   const loadGroups = async () => {
     try {
+      setLoading(true); // Set loading to true before fetching
       const data = await groupService.getGroups();
       setGroups(data);
     } catch (error) {
       console.error('Error loading groups:', error);
       showNotification('Failed to load groups', 'error');
+    } finally {
+      setLoading(false); // Set loading to false after fetching
     }
   };
 
@@ -156,7 +161,9 @@ const Groups = () => {
         </Button>
       </Box>
 
-      {groups.length > 0 ? (
+      {loading ? (
+        <LoadingState type="pulse" message="Loading groups..." height="400px" />
+      ) : groups.length > 0 ? (
         <TableContainer component={Paper} sx={{ boxShadow: 1, borderRadius: 0, mt: 1 }}>
           <Table>
             <TableHead>
