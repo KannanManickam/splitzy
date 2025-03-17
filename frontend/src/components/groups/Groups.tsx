@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography,
   Button,
@@ -31,12 +32,12 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import GroupForm from './GroupForm';
-import GroupDetails from './GroupDetails';
 import { groupService, Group } from '../../services/group';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingState from '../LoadingState';
 
 const Groups = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true); // Add loading state
@@ -116,10 +117,6 @@ const Groups = () => {
       console.error('Error deleting group:', error);
       showNotification('Failed to delete group', 'error');
     }
-  };
-
-  const handleOpenDetails = (groupId: string) => {
-    setSelectedGroup(groupId);
   };
 
   const handleCloseSnackbar = () => {
@@ -252,7 +249,7 @@ const Groups = () => {
                       <Tooltip title="View Details">
                         <IconButton
                           size="small"
-                          onClick={() => handleOpenDetails(group.id)}
+                          onClick={() => navigate(`/groups/${group.id}`)}
                           sx={{
                             border: '1px solid',
                             borderColor: 'divider'
@@ -347,19 +344,6 @@ const Groups = () => {
           groups.find(g => g.id === selectedGroup) : undefined}
         isEditing={isEditing}
       />
-
-      {/* Only show GroupDetails when not editing */}
-      {selectedGroup && !isEditing && (
-        <GroupDetails
-          open={Boolean(selectedGroup && !isEditing)}
-          onClose={() => setSelectedGroup(null)}
-          onEdit={() => {
-            setIsEditing(true);
-            setIsFormOpen(true);
-          }}
-          group={groups.find(g => g.id === selectedGroup)!}
-        />
-      )}
 
       <Dialog
         open={deleteConfirmOpen}

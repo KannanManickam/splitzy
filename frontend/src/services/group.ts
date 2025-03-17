@@ -18,7 +18,11 @@ export interface Group {
     description: string;
     amount: number;
     date: string;
-    paidBy: {
+    payer?: {
+      id: string;
+      name: string;
+    };
+    creator?: {
       id: string;
       name: string;
     };
@@ -35,6 +39,11 @@ export interface CreateGroupData {
 export const groupService = {
   getGroups: async (): Promise<Group[]> => {
     const response = await axiosInstance.get('/groups');
+    return response.data;
+  },
+
+  getGroupDetails: async (id: string): Promise<Group> => {
+    const response = await axiosInstance.get(`/groups/${id}`);
     return response.data;
   },
 

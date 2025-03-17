@@ -15,7 +15,7 @@ export interface ExpenseHistoryItem {
   totalAmount: number;
   friendOwes?: number; // When user paid
   youOwe?: number; // When friend paid
-  createdBy: string;
+  paidBy: string;
 }
 
 export interface BalanceWithFriend {

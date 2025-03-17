@@ -88,7 +88,7 @@ const FriendBalance: React.FC<FriendBalanceProps> = ({ friendId, friendName }) =
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {formatDate(new Date(expense.date))}
+                            {formatDate(expense.date)} • Paid by {expense.paidBy}
                           </Typography>
                           <Typography 
                             variant="body1" 

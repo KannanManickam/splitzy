@@ -6,6 +6,7 @@ import Register from './components/auth/Register';
 import Home from './components/home/Home';
 import Profile from './components/profile/Profile';
 import Groups from './components/groups/Groups';
+import GroupDetails from './components/groups/GroupDetails';
 import Expenses from './components/expenses/Expenses';
 import Friends from './components/friends/Friends';
 import { AuthProvider } from './contexts/AuthContext';
@@ -208,6 +209,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+                <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetails /></ProtectedRoute>} />
                 <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                 <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

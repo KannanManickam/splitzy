@@ -7,6 +7,7 @@ const expenseController = require('../controllers/expenseController');
 const friendRoutes = require('./friendRoutes');
 const expenseRoutes = require('./expenseRoutes');
 const balanceRoutes = require('./balanceRoutes');
+const groupExpenseRoutes = require('./groupExpenseRoutes');
 
 const router = express.Router();
 
@@ -76,5 +77,8 @@ router.post('/groups/:groupId/members',
 
 router.delete('/groups/:groupId/members/:memberId', auth, groupController.removeMember);
 router.delete('/groups/:groupId', auth, groupController.deleteGroup);
+
+// Mount group expense routes under /groups
+router.use('/groups', groupExpenseRoutes);
 
 module.exports = router;

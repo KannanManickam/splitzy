@@ -16,7 +16,8 @@ const createExpense = async (req, res) => {
       description,
       amount: parseFloat(amount),
       date: new Date(date),
-      created_by: paidBy,
+      created_by: req.user.id, // Set creator as current user instead of who paid
+      paid_by: paidBy, // Add paid_by field
       split_type: 'equal' // Adding default split_type as 'equal'
     });
 
@@ -47,6 +48,11 @@ const createExpense = async (req, res) => {
           attributes: ['id', 'name']
         },
         {
+          model: models.User,
+          as: 'payer',
+          attributes: ['id', 'name']
+        },
+        {
           model: models.ExpenseShare,
           as: 'shares',
           include: [{
@@ -65,6 +71,10 @@ const createExpense = async (req, res) => {
       amount: expenseWithDetails.amount,
       date: expenseWithDetails.date,
       paidBy: {
+        id: expenseWithDetails.payer.id,
+        name: expenseWithDetails.payer.name
+      },
+      createdBy: {
         id: expenseWithDetails.creator.id,
         name: expenseWithDetails.creator.name
       },
@@ -97,6 +107,11 @@ const getExpenses = async (req, res) => {
           attributes: ['id', 'name']
         },
         {
+          model: models.User,
+          as: 'payer',
+          attributes: ['id', 'name']
+        },
+        {
           model: models.ExpenseShare,
           as: 'shares',
           include: [
@@ -106,6 +121,11 @@ const getExpenses = async (req, res) => {
               attributes: ['id', 'name']
             }
           ]
+        },
+        {
+          model: models.Group,
+          as: 'group',
+          attributes: ['id', 'name']
         }
       ],
       where: {
@@ -141,6 +161,10 @@ const getExpenses = async (req, res) => {
         amount: expense.amount,
         date: expense.date,
         paidBy: {
+          id: expense.payer.id,
+          name: expense.payer.name
+        },
+        createdBy: {
           id: expense.creator.id,
           name: expense.creator.name
         },
@@ -148,7 +172,13 @@ const getExpenses = async (req, res) => {
           id: share.user.id,
           name: share.user.name,
           amount: share.amount
-        }))
+        })),
+        ...(expense.group && {
+          group: {
+            id: expense.group.id,
+            name: expense.group.name
+          }
+        })
       };
     }));
 
@@ -263,6 +293,11 @@ const updateExpense = async (req, res) => {
           attributes: ['id', 'name']
         },
         {
+          model: models.User,
+          as: 'payer',
+          attributes: ['id', 'name']
+        },
+        {
           model: models.ExpenseShare,
           as: 'shares',
           include: [{
@@ -281,6 +316,10 @@ const updateExpense = async (req, res) => {
       amount: updatedExpense.amount,
       date: updatedExpense.date,
       paidBy: {
+        id: updatedExpense.payer.id,
+        name: updatedExpense.payer.name
+      },
+      createdBy: {
         id: updatedExpense.creator.id,
         name: updatedExpense.creator.name
       },

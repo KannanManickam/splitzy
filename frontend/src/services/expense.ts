@@ -9,11 +9,19 @@ export interface Expense {
     id: string;
     name: string;
   };
+  createdBy: {
+    id: string;
+    name: string;
+  };
   splitBetween: Array<{
     id: string;
     name: string;
     amount: number;
   }>;
+  group?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface CreateExpenseData {

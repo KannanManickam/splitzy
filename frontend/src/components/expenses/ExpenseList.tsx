@@ -21,12 +21,18 @@ import {
   Chip,
   Avatar,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { useNavigate } from 'react-router-dom';
 
 interface ExtendedExpenseFormData extends ExpenseFormData {
   id?: string;
@@ -48,6 +54,8 @@ const ExpenseList: React.FC = () => {
     message: '',
     severity: 'success'
   });
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -157,10 +165,19 @@ const ExpenseList: React.FC = () => {
     }
   };
 
-  const handleDeleteExpense = async (expenseId: string) => {
+  const handleDeleteClick = (expenseId: string) => {
+    setExpenseToDelete(expenseId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!expenseToDelete) return;
+
     try {
-      await expenseService.deleteExpense(expenseId);
-      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+      await expenseService.deleteExpense(expenseToDelete);
+      setExpenses(expenses.filter(exp => exp.id !== expenseToDelete));
+      setDeleteConfirmOpen(false);
+      setExpenseToDelete(null);
       showNotification('Expense deleted successfully', 'success');
     } catch (error: any) {
       console.error('Error deleting expense:', error);
@@ -176,6 +193,8 @@ const ExpenseList: React.FC = () => {
       day: 'numeric'
     });
   };
+
+  const navigate = useNavigate();
 
   return (
     <Box sx={{ 
@@ -214,8 +233,10 @@ const ExpenseList: React.FC = () => {
                 <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Created By</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Paid By</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Split Between</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Group</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -243,6 +264,14 @@ const ExpenseList: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Avatar sx={{ width: 28, height: 28, bgcolor: 'info.main', fontSize: '0.8rem' }}>
+                        {expense.createdBy.name.charAt(0)}
+                      </Avatar>
+                      <Typography>{expense.createdBy.name}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Avatar sx={{ width: 28, height: 28, bgcolor: 'success.main', fontSize: '0.8rem' }}>
                         {expense.paidBy.name.charAt(0)}
                       </Avatar>
@@ -261,20 +290,40 @@ const ExpenseList: React.FC = () => {
                       ))}
                     </Box>
                   </TableCell>
+                  <TableCell>
+                    {expense.group ? (
+                      <Chip
+                        label={expense.group.name}
+                        color="info"
+                        variant="outlined"
+                        onClick={() => navigate(`/groups/${expense.group?.id}`)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            bgcolor: 'info.lighter'
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Personal
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                       {/* Show edit button to everyone but disable if not creator */}
-                      <Tooltip title={expense.paidBy.id === user?.id ? "Edit expense" : "Only expense creator can edit"}>
+                      <Tooltip title={expense.createdBy.id === user?.id ? "Edit expense" : "Only expense creator can edit"}>
                         <span>
                           <IconButton 
                             size="small" 
                             onClick={() => handleEditExpense(expense.id)}
                             color="primary"
-                            disabled={expense.paidBy.id !== user?.id}
+                            disabled={expense.createdBy.id !== user?.id}
                             sx={{ 
                               border: '1px solid', 
                               borderColor: 'divider',
-                              opacity: expense.paidBy.id === user?.id ? 1 : 0.5
+                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5
                             }}
                           >
                             <EditIcon fontSize="small" />
@@ -282,17 +331,17 @@ const ExpenseList: React.FC = () => {
                         </span>
                       </Tooltip>
                       {/* Show delete button to everyone but disable if not creator */}
-                      <Tooltip title={expense.paidBy.id === user?.id ? "Delete expense" : "Only expense creator can delete"}>
+                      <Tooltip title={expense.createdBy.id === user?.id ? "Delete expense" : "Only expense creator can delete"}>
                         <span>
                           <IconButton 
                             size="small" 
-                            onClick={() => handleDeleteExpense(expense.id)} 
+                            onClick={() => handleDeleteClick(expense.id)} 
                             color="error"
-                            disabled={expense.paidBy.id !== user?.id}
+                            disabled={expense.createdBy.id !== user?.id}
                             sx={{ 
                               border: '1px solid', 
                               borderColor: 'divider',
-                              opacity: expense.paidBy.id === user?.id ? 1 : 0.5
+                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5
                             }}
                           >
                             <DeleteIcon fontSize="small" />
@@ -355,6 +404,27 @@ const ExpenseList: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <DialogTitle>Delete Expense</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this expense? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

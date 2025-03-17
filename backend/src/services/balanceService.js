@@ -8,9 +8,9 @@ const { Op, Sequelize } = require('sequelize');
  */
 async function getFriendBalances(userId) {
   try {
-    // Find expenses where the user is the creator (paid)
+    // Find expenses where the user paid
     const paidExpenses = await models.Expense.findAll({
-      where: { created_by: userId },
+      where: { paid_by: userId },
       include: [
         {
           model: models.ExpenseShare,
@@ -27,14 +27,20 @@ async function getFriendBalances(userId) {
         { 
           model: models.Expense,
           as: 'expense',
-          include: [{ model: models.User, as: 'creator', attributes: ['id', 'name', 'email'] }]
+          include: [
+            { 
+              model: models.User, 
+              as: 'payer', 
+              attributes: ['id', 'name', 'email'] 
+            }
+          ]
         }
       ]
     });
 
     // Calculate balances for each friend
     const balances = {};
-    
+
     // Process expenses where user paid
     paidExpenses.forEach(expense => {
       expense.shares.forEach(share => {
@@ -60,16 +66,16 @@ async function getFriendBalances(userId) {
     // Process expenses where user owes
     owedExpenses.forEach(share => {
       const expense = share.expense;
-      const friendId = expense.created_by;
+      const friendId = expense.paid_by;
       
       if (friendId !== userId) {
-        const friendName = expense.creator.name;
+        const friendName = expense.payer.name;
         
         if (!balances[friendId]) {
           balances[friendId] = { 
             id: friendId, 
             name: friendName,
-            email: expense.creator.email,
+            email: expense.payer.email,
             balance: 0
           };
         }
@@ -120,9 +126,9 @@ async function getBalanceWithFriend(userId, friendId) {
  * Get expense history between two users
  */
 async function getExpenseHistoryBetweenUsers(userId, friendId) {
-  // Expenses created by user where friend has a share
-  const userCreatedExpenses = await models.Expense.findAll({
-    where: { created_by: userId },
+  // Get expenses where user paid and friend was involved
+  const userPaidExpenses = await models.Expense.findAll({
+    where: { paid_by: userId },
     include: [
       {
         model: models.ExpenseShare,
@@ -131,16 +137,16 @@ async function getExpenseHistoryBetweenUsers(userId, friendId) {
       },
       {
         model: models.User,
-        as: 'creator',
+        as: 'payer',
         attributes: ['id', 'name']
       }
     ],
     order: [['date', 'DESC']]
   });
   
-  // Expenses created by friend where user has a share
-  const friendCreatedExpenses = await models.Expense.findAll({
-    where: { created_by: friendId },
+  // Get expenses where friend paid and user was involved
+  const friendPaidExpenses = await models.Expense.findAll({
+    where: { paid_by: friendId },
     include: [
       {
         model: models.ExpenseShare,
@@ -149,7 +155,7 @@ async function getExpenseHistoryBetweenUsers(userId, friendId) {
       },
       {
         model: models.User,
-        as: 'creator',
+        as: 'payer',
         attributes: ['id', 'name']
       }
     ],
@@ -157,24 +163,24 @@ async function getExpenseHistoryBetweenUsers(userId, friendId) {
   });
   
   // Format expenses for consistent display
-  const formattedUserExpenses = userCreatedExpenses.map(expense => ({
+  const formattedUserExpenses = userPaidExpenses.map(expense => ({
     id: expense.id,
     description: expense.description,
     date: expense.date,
     type: 'youPaid',
     totalAmount: parseFloat(expense.amount),
     friendOwes: parseFloat(expense.shares.find(share => share.user_id === friendId).amount),
-    createdBy: expense.creator.name
+    paidBy: expense.payer.name
   }));
   
-  const formattedFriendExpenses = friendCreatedExpenses.map(expense => ({
+  const formattedFriendExpenses = friendPaidExpenses.map(expense => ({
     id: expense.id,
     description: expense.description,
     date: expense.date,
     type: 'friendPaid',
     totalAmount: parseFloat(expense.amount),
     youOwe: parseFloat(expense.shares.find(share => share.user_id === userId).amount),
-    createdBy: expense.creator.name
+    paidBy: expense.payer.name
   }));
   
   // Combine and sort by date

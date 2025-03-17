@@ -82,18 +82,17 @@ export default function Home() {
       const amountOwed = expenses
         .filter(exp => exp.paidBy.id === user?.id)
         .reduce((sum, exp) => {
-          // Subtract your own share
-          const yourShare = exp.amount / exp.splitBetween.length;
-          return sum + (exp.amount - yourShare);
+          const totalAmount = Number(exp.amount);
+          const yourShare = totalAmount / exp.splitBetween.length;
+          return sum + (totalAmount - yourShare); // You get back everything except your share
         }, 0);
 
-      // Amount you owe to others
+      // Amount you owe to others (when others paid)
       const amountOwing = expenses
         .filter(exp => exp.paidBy.id !== user?.id && exp.splitBetween.some(u => u.id === user?.id))
         .reduce((sum, exp) => {
-          // Only add your share of the expense
           const yourShare = exp.amount / exp.splitBetween.length;
-          return sum + yourShare;
+          return sum + yourShare; // You only owe your share
         }, 0);
 
       setDashboardData({
@@ -103,7 +102,7 @@ export default function Home() {
         groups: groups.slice(0, 3),
         totalBalance: Number((amountOwed - amountOwing).toFixed(2)),
         amountOwed: Number(amountOwed.toFixed(2)),
-        amountOwing: Number(amountOwing.toFixed(2)),
+        amountOwing: Number(amountOwing.toFixed(2))
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);

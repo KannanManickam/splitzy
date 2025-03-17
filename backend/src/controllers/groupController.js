@@ -163,11 +163,27 @@ const getGroupDetails = async (req, res) => {
         {
           model: models.Expense,
           as: 'expenses',
-          include: [{
-            model: models.User,
-            as: 'creator',
-            attributes: ['id', 'name']
-          }]
+          include: [
+            {
+              model: models.User,
+              as: 'creator',
+              attributes: ['id', 'name']
+            },
+            {
+              model: models.User,
+              as: 'payer',
+              attributes: ['id', 'name']
+            },
+            {
+              model: models.ExpenseShare,
+              as: 'shares',
+              include: [{
+                model: models.User,
+                as: 'user',
+                attributes: ['id', 'name', 'email']
+              }]
+            }
+          ]
         }
       ]
     });
@@ -182,7 +198,7 @@ const getGroupDetails = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    res.json({ group });
+    res.json(group);
   } catch (error) {
     console.error('Group details fetch error:', error);
     res.status(500).json({ message: 'Server error while fetching group details' });

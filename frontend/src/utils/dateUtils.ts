@@ -1,16 +1,15 @@
 /**
  * Format date to a readable string
- * @param date The date to format
+ * @param dateString The date string to format
  * @returns Formatted date string (e.g., "Apr 20, 2023")
  */
-export const formatDate = (date: Date): string => {
-  const options: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  };
-  
-  return date.toLocaleDateString('en-US', options);
+export const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 };
 
 /**

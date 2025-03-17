@@ -8,9 +8,19 @@ module.exports = (sequelize) => {
         as: 'creator'
       });
       
+      Expense.belongsTo(models.User, {
+        foreignKey: 'paid_by',
+        as: 'payer'
+      });
+      
       Expense.hasMany(models.ExpenseShare, {
         foreignKey: 'expense_id',
         as: 'shares'
+      });
+      
+      Expense.belongsTo(models.Group, {
+        foreignKey: 'group_id',
+        as: 'group'
       });
     }
   }
@@ -44,6 +54,22 @@ module.exports = (sequelize) => {
       allowNull: false,
       references: {
         model: 'users',
+        key: 'id'
+      }
+    },
+    paid_by: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    group_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'groups',
         key: 'id'
       }
     },
