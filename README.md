@@ -27,12 +27,13 @@ An open-source expense-sharing application similar to Splitwise that helps users
 - Payment suggestions for settling debts
 - Visual indicators for balances (who owes whom)
 
-### Coming Soon 🚀
-
 #### Group Expense Integration
 - Adding expenses to specific groups
 - Splitting expenses among group members
 - Group-level balance calculations
+- Group settlement suggestions
+
+### Coming Soon 🚀
 
 #### Settlement Feature
 - Record payments between users
@@ -96,9 +97,9 @@ An open-source expense-sharing application similar to Splitwise that helps users
 ## Development
 
 The project follows a feature-based development approach. Current focus areas:
-1. Group expense integration
-2. Settlement tracking system
-3. Advanced filtering and expense categorization
+1. Settlement tracking system
+2. Advanced filtering and expense categorization
+3. Activity notifications
 
 ## Contributing
 
