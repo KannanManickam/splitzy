@@ -28,11 +28,13 @@ import {
   Logout as LogoutIcon,
   ArrowForward as ArrowForwardIcon,
   Visibility as VisibilityIcon,
+  AccountBalanceWallet,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { groupService } from '../../services/group';
 import { expenseService } from '../../services/expense';
+import { getFriendBalances } from '../../services/balance';
 import LoadingState from '../LoadingState';
 import PaymentSuggestions from './PaymentSuggestions';
 
@@ -63,38 +65,34 @@ export default function Home() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const theme = useTheme();
+  const location = useLocation();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const refreshDashboardData = async () => {
     try {
-      const [groups, expenses] = await Promise.all([
+      setLoading(true);
+      const [groups, expenses, balances] = await Promise.all([
         groupService.getGroups(),
-        expenseService.getExpenses()
+        expenseService.getExpenses(),
+        getFriendBalances()
       ]);
-
-      // Calculate various totals
+      
+      // Calculate expenses total
       const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
       
-      // Amount owed to you (expenses you paid for)
-      const amountOwed = expenses
-        .filter(exp => exp.paidBy.id === user?.id)
-        .reduce((sum, exp) => {
-          const totalAmount = Number(exp.amount);
-          const yourShare = totalAmount / exp.splitBetween.length;
-          return sum + (totalAmount - yourShare); // You get back everything except your share
-        }, 0);
-
-      // Amount you owe to others (when others paid)
-      const amountOwing = expenses
-        .filter(exp => exp.paidBy.id !== user?.id && exp.splitBetween.some(u => u.id === user?.id))
-        .reduce((sum, exp) => {
-          const yourShare = exp.amount / exp.splitBetween.length;
-          return sum + yourShare; // You only owe your share
-        }, 0);
-
+      // Calculate balance totals directly from balance API instead of expenses
+      let amountOwed = 0;
+      let amountOwing = 0;
+      
+      balances.forEach(balance => {
+        if (balance.balance > 0) {
+          // Positive balance means others owe you
+          amountOwed += balance.balance;
+        } else if (balance.balance < 0) {
+          // Negative balance means you owe others
+          amountOwing += Math.abs(balance.balance);
+        }
+      });
+      
       setDashboardData({
         totalExpenses,
         totalGroups: groups.length,
@@ -111,6 +109,15 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    refreshDashboardData();
+  }, []);
+  
+  // Add effect to refresh data when location changes
+  useEffect(() => {
+    refreshDashboardData();
+  }, [location.key]);
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -125,6 +132,7 @@ export default function Home() {
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
     { text: 'Expenses', icon: <ReceiptIcon />, path: '/expenses' },
     { text: 'Friends', icon: <GroupIcon />, path: '/friends' },
+    { text: 'Settlements', icon: <AccountBalanceWallet />, path: '/settlements' },
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
   ];
 
@@ -319,7 +327,7 @@ export default function Home() {
 
             <Box sx={{ maxWidth: "xl", marginLeft: 0, px: 3, mb: 6 }}>
               {/* Payment Suggestions Section */}
-              <PaymentSuggestions />
+              <PaymentSuggestions onSettlementSuccess={refreshDashboardData} />
               
               <Grid container spacing={4} justifyContent="flex-start" alignItems="flex-start">
                 {/* Active Groups Section */}

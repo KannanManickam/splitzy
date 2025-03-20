@@ -101,7 +101,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const GroupDetails = () => {
+const GroupDetails: React.FC = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -183,6 +183,29 @@ const GroupDetails = () => {
     }
   };
 
+  const fetchBalancesAndSettlements = async () => {
+    try {
+      const [balances, settlements] = await Promise.all([
+        groupExpenseService.getGroupBalances(groupId!),
+        groupExpenseService.getGroupSettlementSuggestions(groupId!)
+      ]);
+      
+      setBalances(balances);
+      setSettlements(settlements);
+      setHasUnsettledBalances(checkUnsettledBalances(balances));
+    } catch (error) {
+      console.error('Error fetching balances and settlements:', error);
+    }
+  };
+
+  const handleSettlementSuccess = async () => {
+    // First wait a short moment to allow the backend to process the settlement
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Then refresh all the data
+    await fetchBalancesAndSettlements();
+  };
+
   const checkUnsettledBalances = (balances: any[]) => {
     return balances.some(balance => Math.abs(balance.amount) > 0.01);
   };
@@ -200,6 +223,7 @@ const GroupDetails = () => {
     try {
       await groupExpenseService.deleteGroupExpense(groupId!, expense.id);
       await fetchGroupExpenses();
+      await fetchBalancesAndSettlements();
     } catch (error) {
       console.error('Error deleting expense:', error);
     }
@@ -219,6 +243,7 @@ const GroupDetails = () => {
       }
       handleCloseExpenseForm();
       await fetchGroupExpenses();
+      await fetchBalancesAndSettlements();
     } catch (error) {
       console.error('Error handling expense:', error);
     }
@@ -361,6 +386,8 @@ const GroupDetails = () => {
         <GroupBalances 
           balances={balances}
           settlements={settlements}
+          groupId={groupId || ''}
+          onSettlementSuccess={handleSettlementSuccess}
         />
         {hasUnsettledBalances && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>

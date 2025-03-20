@@ -8,6 +8,9 @@ const { Op, Sequelize } = require('sequelize');
  */
 async function getFriendBalances(userId) {
   try {
+    // STEP 1: Calculate raw expense-based balances
+    const expenseBalances = {};
+
     // Find expenses where the user paid
     const paidExpenses = await models.Expense.findAll({
       where: { paid_by: userId },
@@ -38,9 +41,6 @@ async function getFriendBalances(userId) {
       ]
     });
 
-    // Calculate balances for each friend
-    const balances = {};
-
     // Process expenses where user paid
     paidExpenses.forEach(expense => {
       expense.shares.forEach(share => {
@@ -48,8 +48,8 @@ async function getFriendBalances(userId) {
           const friendId = share.user_id;
           const friendName = share.user.name;
           
-          if (!balances[friendId]) {
-            balances[friendId] = { 
+          if (!expenseBalances[friendId]) {
+            expenseBalances[friendId] = { 
               id: friendId, 
               name: friendName,
               email: share.user.email,
@@ -57,8 +57,8 @@ async function getFriendBalances(userId) {
             };
           }
           
-          // Friend owes user
-          balances[friendId].balance += parseFloat(share.amount);
+          // Friend owes user (positive balance)
+          expenseBalances[friendId].balance += parseFloat(share.amount);
         }
       });
     });
@@ -71,8 +71,8 @@ async function getFriendBalances(userId) {
       if (friendId !== userId) {
         const friendName = expense.payer.name;
         
-        if (!balances[friendId]) {
-          balances[friendId] = { 
+        if (!expenseBalances[friendId]) {
+          expenseBalances[friendId] = { 
             id: friendId, 
             name: friendName,
             email: expense.payer.email,
@@ -80,13 +80,81 @@ async function getFriendBalances(userId) {
           };
         }
         
-        // User owes friend
-        balances[friendId].balance -= parseFloat(share.amount);
+        // User owes friend (negative balance)
+        expenseBalances[friendId].balance -= parseFloat(share.amount);
       }
     });
 
+    // STEP 2: Apply settlements
+    // Get settlements where user is payer (sent money to friend)
+    const userPaidSettlements = await models.Settlement.findAll({
+      where: { payer_id: userId },
+      include: [
+        { 
+          model: models.User, 
+          as: 'receiver', 
+          attributes: ['id', 'name', 'email'] 
+        }
+      ]
+    });
+
+    // Get settlements where user is receiver (received money from friend)
+    const userReceivedSettlements = await models.Settlement.findAll({
+      where: { receiver_id: userId },
+      include: [
+        { 
+          model: models.User, 
+          as: 'payer', 
+          attributes: ['id', 'name', 'email'] 
+        }
+      ]
+    });
+
+    // Deep clone the expense balances to create the net balances
+    const netBalances = JSON.parse(JSON.stringify(expenseBalances));
+
+    // Process settlements where user paid friend 
+    // (this means the user is settling a debt they owe OR friend is returning excess money)
+    userPaidSettlements.forEach(settlement => {
+      const friendId = settlement.receiver_id;
+      const friendName = settlement.receiver.name;
+      
+      if (!netBalances[friendId]) {
+        netBalances[friendId] = { 
+          id: friendId, 
+          name: friendName,
+          email: settlement.receiver.email,
+          balance: 0
+        };
+      }
+      
+      // When user pays friend, it typically reduces or eliminates a negative balance
+      // (The user is paying what they owe)
+      netBalances[friendId].balance += parseFloat(settlement.amount);
+    });
+
+    // Process settlements where user received payment from friend
+    // (this means the friend is settling a debt they owe OR user is returning excess money)
+    userReceivedSettlements.forEach(settlement => {
+      const friendId = settlement.payer_id;
+      const friendName = settlement.payer.name;
+      
+      if (!netBalances[friendId]) {
+        netBalances[friendId] = { 
+          id: friendId, 
+          name: friendName,
+          email: settlement.payer.email,
+          balance: 0
+        };
+      }
+      
+      // When user receives payment from friend, it typically reduces or eliminates a positive balance
+      // (The friend is paying what they owe)
+      netBalances[friendId].balance -= parseFloat(settlement.amount);
+    });
+
     // Convert to array and round balances to 2 decimal places
-    const balanceArray = Object.values(balances).map(balance => ({
+    const balanceArray = Object.values(netBalances).map(balance => ({
       ...balance,
       balance: Math.round(balance.balance * 100) / 100
     }));
@@ -238,9 +306,75 @@ async function getPaymentSuggestions(userId) {
   return suggestions;
 }
 
+/**
+ * Calculate balances between a user and their friends, considering ONLY expenses (no settlements)
+ * This is used by the settlement service to avoid double-counting settlements
+ * Positive balance means friend owes user
+ * Negative balance means user owes friend
+ */
+async function getExpenseOnlyBalanceWithFriend(userId, friendId) {
+  try {
+    // Find expenses where the user paid
+    const paidExpenses = await models.Expense.findAll({
+      where: { paid_by: userId },
+      include: [
+        {
+          model: models.ExpenseShare,
+          as: 'shares',
+          where: { user_id: friendId },
+          required: true
+        }
+      ]
+    });
+
+    // Find expenses where the friend paid and user has a share
+    const owedExpenses = await models.ExpenseShare.findAll({
+      where: { user_id: userId },
+      include: [
+        { 
+          model: models.Expense,
+          as: 'expense',
+          where: { paid_by: friendId },
+          required: true
+        }
+      ]
+    });
+
+    // Calculate balance
+    let balance = 0;
+
+    // Process expenses where user paid (friend owes user)
+    paidExpenses.forEach(expense => {
+      const friendShare = expense.shares.find(share => share.user_id === friendId);
+      if (friendShare) {
+        // Friend owes user (positive)
+        balance += parseFloat(friendShare.amount);
+      }
+    });
+
+    // Process expenses where user owes friend (friend paid)
+    owedExpenses.forEach(share => {
+      // User owes friend (negative)
+      balance -= parseFloat(share.amount);
+    });
+
+    // Get expense history for the detailed view
+    const expenseHistory = await getExpenseHistoryBetweenUsers(userId, friendId);
+    
+    return {
+      balance: Math.round(balance * 100) / 100,
+      expenseHistory
+    };
+  } catch (error) {
+    console.error('Error calculating expense-only balance with friend:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getFriendBalances,
   getBalanceWithFriend,
   getExpenseHistoryBetweenUsers,
-  getPaymentSuggestions
+  getPaymentSuggestions,
+  getExpenseOnlyBalanceWithFriend
 };

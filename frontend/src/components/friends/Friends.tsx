@@ -29,6 +29,7 @@ import { friendService } from '../../services/friend';
 import LoadingState from '../LoadingState';
 import FriendBalance from './FriendBalance';
 import { getFriendBalances } from '../../services/balance';
+import { useLocation } from 'react-router-dom';
 
 interface Friend {
   id: string;
@@ -60,13 +61,21 @@ const Friends = () => {
   });
   const [selectedFriend, setSelectedFriend] = useState<FriendWithBalance | null>(null);
   const [showBalance, setShowBalance] = useState(false);
+  const location = useLocation();
   
   useEffect(() => {
     loadFriendsData();
   }, []);
-
+  
+  // Add effect to refresh data when navigating back to this component
+  useEffect(() => {
+    // This will refresh when user navigates back to Friends page or when location changes
+    loadFriendsData();
+  }, [location.key]);
+  
   const loadFriendsData = async () => {
     try {
+      setLoading(true);
       const [friendsList, pendingRequests, sentRequests] = await Promise.all([
         friendService.getFriends(),
         friendService.getPendingRequests(),
@@ -107,6 +116,10 @@ const Friends = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSettlementSuccess = () => {
+    loadFriendsData();
   };
 
   const handleAddFriend = async () => {
@@ -245,7 +258,8 @@ const Friends = () => {
         </Box>
         <FriendBalance 
           friendId={selectedFriend.id} 
-          friendName={selectedFriend.name} 
+          friendName={selectedFriend.name}
+          onSettlementSuccess={handleSettlementSuccess}
         />
       </Container>
     );

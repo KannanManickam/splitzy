@@ -8,6 +8,7 @@ const friendRoutes = require('./friendRoutes');
 const expenseRoutes = require('./expenseRoutes');
 const balanceRoutes = require('./balanceRoutes');
 const groupExpenseRoutes = require('./groupExpenseRoutes');
+const settlementRoutes = require('./settlementRoutes');
 
 const router = express.Router();
 
@@ -19,6 +20,9 @@ router.use('/expenses', expenseRoutes);
 
 // Balance routes
 router.use('/balances', balanceRoutes);
+
+// Settlement routes
+router.use('/settlements', settlementRoutes);
 
 // User routes
 router.post('/users/register',

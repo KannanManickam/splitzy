@@ -136,7 +136,7 @@ async function calculateGroupBalances(groupId) {
       {
         model: models.User,
         as: 'payer',
-        attributes: ['id', 'name']
+        attributes: ['id', 'name', 'email']
       },
       {
         model: models.ExpenseShare,
@@ -145,7 +145,7 @@ async function calculateGroupBalances(groupId) {
           {
             model: models.User,
             as: 'user',
-            attributes: ['id', 'name']
+            attributes: ['id', 'name', 'email']
           }
         ]
       }
@@ -159,12 +159,14 @@ async function calculateGroupBalances(groupId) {
   expenses.forEach(expense => {
     const payerId = expense.paid_by;
     const payerName = expense.payer.name;
+    const payerEmail = expense.payer.email;
 
     // Initialize payer's balance if not exists
     if (!balances[payerId]) {
       balances[payerId] = {
-        userId: payerId,
+        id: payerId,  // Changed from userId to id
         name: payerName,
+        email: payerEmail,
         balance: 0
       };
     }
@@ -173,12 +175,14 @@ async function calculateGroupBalances(groupId) {
     expense.shares.forEach(share => {
       const memberId = share.user_id;
       const memberName = share.user.name;
+      const memberEmail = share.user.email;
 
       // Initialize member's balance if not exists
       if (!balances[memberId]) {
         balances[memberId] = {
-          userId: memberId,
+          id: memberId,  // Changed from userId to id
           name: memberName,
+          email: memberEmail,
           balance: 0
         };
       }
@@ -218,8 +222,6 @@ async function getGroupSettlementSuggestions(groupId, userId) {
     // Generate payment suggestions
     const suggestions = [];
     
-    // Simple greedy algorithm for settling debts
-    // Note: This is a simplified approach and might not be optimal for all cases
     let i = 0; // Index for positive balances
     let j = 0; // Index for negative balances
     
@@ -239,12 +241,12 @@ async function getGroupSettlementSuggestions(groupId, userId) {
       if (roundedAmount > 0) {
         suggestions.push({
           from: {
-            id: debtor.id,
+            id: debtor.id,  // Changed from userId to id
             name: debtor.name,
             email: debtor.email
           },
           to: {
-            id: creditor.id,
+            id: creditor.id,  // Changed from userId to id
             name: creditor.name,
             email: creditor.email
           },

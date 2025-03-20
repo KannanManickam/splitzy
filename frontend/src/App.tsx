@@ -9,6 +9,7 @@ import Groups from './components/groups/Groups';
 import GroupDetails from './components/groups/GroupDetails';
 import Expenses from './components/expenses/Expenses';
 import Friends from './components/friends/Friends';
+import Settlements from './components/settlements/Settlements';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import {
@@ -32,6 +33,7 @@ import {
   Person as PersonIcon,
   Logout as LogoutIcon,
   Menu as MenuIcon,
+  AccountBalanceWallet,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
@@ -68,6 +70,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
     { text: 'Expenses', icon: <ReceiptIcon />, path: '/expenses' },
     { text: 'Friends', icon: <GroupIcon />, path: '/friends' },
+    { text: 'Settlements', icon: <AccountBalanceWallet />, path: '/settlements' },
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
   ];
 
@@ -212,6 +215,7 @@ function App() {
                 <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetails /></ProtectedRoute>} />
                 <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                 <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                <Route path="/settlements" element={<ProtectedRoute><Settlements /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="*" element={<div>404 Not Found</div>} />
               </Routes>

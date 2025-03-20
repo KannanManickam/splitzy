@@ -33,22 +33,36 @@ An open-source expense-sharing application similar to Splitwise that helps users
 - Group-level balance calculations
 - Group settlement suggestions
 
-### Coming Soon 🚀
-
-#### Settlement Feature
+#### Settlement Feature ✅
 - Record payments between users
 - Settlement history
 - Mark debts as settled
+- Group settlement tracking
+- Settlement notifications and confirmations
+
+### Coming Soon 🚀
+
+#### Profile Customization
+- Default currency preferences
+- Timezone settings
+- Notification preferences 
+- Profile picture upload
+- Custom expense categories
+- Language preferences
 
 #### Advanced Expense Features
 - Expense categories and tagging
 - Recurring expenses
 - Receipt image upload
+- Expense reminders
+- Export expenses to CSV/PDF
 
 #### Activity and Notifications
 - Activity feed with recent actions
 - Email notifications
 - In-app notifications
+- Weekly expense summaries
+- Bill due reminders
 
 ## Tech Stack
 
