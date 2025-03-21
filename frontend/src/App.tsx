@@ -113,8 +113,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
   ];
 
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setMobileOpen(false);
+  };
+
   const handleLogout = () => {
     logout();
+    setMobileOpen(false);
     navigate('/login');
   };
 
@@ -131,7 +137,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton 
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigation(item.path)}
               selected={location.pathname === item.path}
               sx={{
                 py: 1.5,
@@ -223,7 +229,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ 
+              mr: 2, 
+              display: { sm: 'none' },
+              color: 'text.primary',
+              '&:hover': {
+                bgcolor: 'action.hover'
+              }
+            }}
           >
             <MenuIcon />
           </IconButton>
@@ -279,12 +292,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
+          ModalProps={{ 
+            keepMounted: true,
+            sx: {
+              '& .MuiBackdrop-root': {
+                backgroundColor: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }}
           sx={{
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              boxShadow: (theme) => theme.shadows[8],
+              border: 'none'
             },
           }}
         >
