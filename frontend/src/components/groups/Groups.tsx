@@ -1,393 +1,547 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Typography,
+import React, { useState, useEffect } from 'react';
+import { 
+  Container, 
+  Typography, 
+  Box, 
+  Grid, 
+  Card, 
+  CardContent, 
+  CardActions,
   Button,
-  Box,
-  Chip,
-  Paper,
-  Snackbar,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Avatar,
-  IconButton,
-  AvatarGroup,
   Tooltip,
+  Avatar,
+  AvatarGroup,
+  Fab,
+  Skeleton,
+  Stack,
+  Chip,
+  TextField,
+  InputAdornment,
+  Alert,
+  Menu,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Divider,
+  Paper,
+  useTheme,
+  SelectChangeEvent,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import GroupIcon from '@mui/icons-material/Group';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
-import CategoryIcon from '@mui/icons-material/Category';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import DeleteIcon from '@mui/icons-material/Delete';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogActions from '@mui/material/DialogActions';
+import { 
+  Add as AddIcon,
+  Search as SearchIcon,
+  Groups as GroupsIcon,
+  FilterList as FilterListIcon,
+  Sort as SortIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
+  LibraryBooks as LibraryBooksIcon,
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { groupService } from '../../services/group';
 import GroupForm from './GroupForm';
-import { groupService, Group } from '../../services/group';
 import { useAuth } from '../../contexts/AuthContext';
-import LoadingState from '../LoadingState';
+
+interface Group {
+  id: string;
+  name: string;
+  description: string;
+  members: Array<{ id: string; name: string; email: string }>;
+  totalExpenses?: number;
+  totalBalance?: number;
+  category?: string;
+  recentActivity?: string;
+}
+
+type SortOption = 'name_asc' | 'name_desc' | 'recent_first' | 'oldest_first' | 'most_members' | 'least_members';
 
 const Groups = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true); // Add loading state
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [openForm, setOpenForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('recent_first');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
-    loadGroups();
+    fetchGroups();
   }, []);
 
-  const loadGroups = async () => {
+  const fetchGroups = async () => {
     try {
-      setLoading(true); // Set loading to true before fetching
-      const data = await groupService.getGroups();
-      setGroups(data);
-    } catch (error) {
-      console.error('Error loading groups:', error);
-      showNotification('Failed to load groups', 'error');
+      setLoading(true);
+      const response = await groupService.getGroups();
+      setGroups(response as Group[]);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching groups:', err);
+      setError('Failed to load groups');
     } finally {
-      setLoading(false); // Set loading to false after fetching
+      setLoading(false);
     }
   };
 
-  const handleAddGroup = async (groupData: any) => {
+  const handleCreateGroup = async (groupData: any) => {
     try {
       const newGroup = await groupService.createGroup(groupData);
-      setGroups([...groups, newGroup]);
-      setIsFormOpen(false);
-      showNotification('Group created successfully', 'success');
-    } catch (error) {
-      console.error('Error adding group:', error);
-      showNotification('Failed to create group', 'error');
+      setGroups(prevGroups => [...prevGroups, newGroup as Group]);
+      setOpenForm(false);
+    } catch (err) {
+      console.error('Error creating group:', err);
+      throw err;
     }
   };
 
-  const handleEditGroup = async (groupData: any) => {
-    try {
-      if (!selectedGroup) return;
-      const updatedGroup = await groupService.updateGroup(selectedGroup, groupData);
-      setGroups(groups.map(group => group.id === selectedGroup ? updatedGroup : group));
-      setSelectedGroup(null);
-      setIsFormOpen(false);
-      showNotification('Group updated successfully', 'success');
-    } catch (error) {
-      console.error('Error editing group:', error);
-      showNotification('Failed to update group', 'error');
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+
+  const handleSortClose = (option?: SortOption) => {
+    setSortAnchorEl(null);
+    if (option) {
+      setSortBy(option);
     }
   };
 
-  const handleDeleteClick = (groupId: string) => {
-    setGroupToDelete(groupId);
-    setDeleteConfirmOpen(true);
-  };
+  const filteredAndSortedGroups = React.useMemo(() => {
+    let result = [...groups];
 
-  const handleDeleteConfirm = async () => {
-    if (!groupToDelete) return;
-
-    try {
-      await groupService.deleteGroup(groupToDelete);
-      setGroups(groups.filter(group => group.id !== groupToDelete));
-      setDeleteConfirmOpen(false);
-      setGroupToDelete(null);
-      showNotification('Group deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting group:', error);
-      showNotification('Failed to delete group', 'error');
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(group => 
+        group.name.toLowerCase().includes(query) ||
+        group.description?.toLowerCase().includes(query) ||
+        group.members.some(member => member.name.toLowerCase().includes(query))
+      );
     }
-  };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      result = result.filter(group => group.category === filterCategory);
+    }
 
-  const showNotification = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'name_desc':
+          return b.name.localeCompare(a.name);
+        case 'most_members':
+          return b.members.length - a.members.length;
+        case 'least_members':
+          return a.members.length - b.members.length;
+        case 'recent_first':
+          return new Date(b.recentActivity || 0).getTime() - new Date(a.recentActivity || 0).getTime();
+        case 'oldest_first':
+          return new Date(a.recentActivity || 0).getTime() - new Date(b.recentActivity || 0).getTime();
+        default:
+          return 0;
+      }
     });
-  };
 
-  return (
-    <Box sx={{ mx: -3, mt: -3 }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 0,
-        px: 3,
-        py: 1
-      }}>
-        <Typography variant="h4" component="h1" fontWeight={600}>
-          Groups
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setIsFormOpen(true);
-            setIsEditing(false);
-          }}
-          size="large"
-          sx={{ px: 3, py: 1 }}
-        >
-          Add Group
-        </Button>
-      </Box>
+    return result;
+  }, [groups, searchQuery, sortBy, filterCategory]);
 
-      {loading ? (
-        <LoadingState type="pulse" message="Loading groups..." height="400px" />
-      ) : groups.length > 0 ? (
-        <TableContainer component={Paper} sx={{ boxShadow: 1, borderRadius: 0, mt: 1 }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'background.default' }}>
-                <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Members</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Balance</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {groups.map((group) => (
-                <TableRow 
-                  key={group.id}
+  const renderGroupCard = (group: Group) => (
+    <Card 
+      sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.2s ease-in-out',
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: theme.shadows[8],
+        }
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar 
+              sx={{ 
+                bgcolor: 'primary.main',
+                width: 48,
+                height: 48,
+                fontSize: '1.25rem',
+                fontWeight: 600
+              }}
+            >
+              {group.name[0]}
+            </Avatar>
+            <Box>
+              <Typography variant="h6" component="div" gutterBottom={false} fontWeight={600}>
+                {group.name}
+              </Typography>
+              {group.category && (
+                <Chip 
+                  label={group.category}
+                  size="small"
                   sx={{ 
-                    '&:hover': { 
-                      bgcolor: 'rgba(0, 0, 0, 0.04)'
-                    },
-                    transition: 'background-color 0.2s ease'
+                    bgcolor: 'primary.lighter',
+                    color: 'primary.main',
+                    fontWeight: 500
                   }}
-                >
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: 'primary.main',
-                          width: 32,
-                          height: 32
-                        }}
-                      >
-                        <GroupIcon fontSize="small" />
-                      </Avatar>
-                      <Typography fontWeight={500}>{group.name}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={<CategoryIcon />}
-                      label={group.category}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AvatarGroup 
-                        max={3}
-                        sx={{
-                          '& .MuiAvatar-root': {
-                            width: 28,
-                            height: 28,
-                            fontSize: '0.875rem',
-                            bgcolor: 'secondary.main'
-                          }
-                        }}
-                      >
-                        {group.members.map((member) => (
-                          <Tooltip key={member.id} title={member.name}>
-                            <Avatar 
-                              sx={{ 
-                                bgcolor: member.id === user?.id ? 'primary.main' : 'secondary.main'
-                              }}
-                            >
-                              {member.name[0]}
-                            </Avatar>
-                          </Tooltip>
-                        ))}
-                      </AvatarGroup>
-                      <Typography color="text.secondary" variant="body2">
-                        {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AccountBalanceIcon color="primary" fontSize="small" />
-                      <Typography fontWeight={600} color="primary">
-                        ${group.totalBalance.toFixed(2)}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                      <Tooltip title="View Details">
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/groups/${group.id}`)}
-                          sx={{
-                            border: '1px solid',
-                            borderColor: 'divider'
-                          }}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={group.created_by === user?.id ? "Edit Group" : "Only group creator can edit"}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              // Don't set selectedGroup when directly editing
-                              setIsEditing(true);
-                              setIsFormOpen(true);
-                              setSelectedGroup(group.id);
-                            }}
-                            color="primary"
-                            disabled={group.created_by !== user?.id}
-                            sx={{
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              opacity: group.created_by === user?.id ? 1 : 0.5
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Tooltip title={group.created_by === user?.id ? "Delete Group" : "Only group creator can delete"}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteClick(group.id)}
-                            color="error"
-                            disabled={group.created_by !== user?.id}
-                            sx={{
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              opacity: group.created_by === user?.id ? 1 : 0.5
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Paper
-          sx={{
-            p: 6,
-            textAlign: 'center',
-            borderRadius: 2,
-            mx: 3,
-            mt: 3
-          }}
-        >
-          <GroupIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>No Groups Found</Typography>
-          <Typography color="text.secondary" paragraph>
-            You haven't created any groups yet. Click the button above to create your first group.
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setIsFormOpen(true);
-              setIsEditing(false);
+                />
+              )}
+            </Box>
+          </Box>
+        </Box>
+
+        {group.description && (
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ 
+              mb: 2,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              minHeight: '2.5em'
             }}
           >
-            Create Your First Group
-          </Button>
-        </Paper>
-      )}
+            {group.description}
+          </Typography>
+        )}
 
-      <GroupForm
-        open={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setSelectedGroup(null);
-          setIsEditing(false);
-        }}
-        onSubmit={isEditing ? handleEditGroup : handleAddGroup}
-        initialData={isEditing && selectedGroup ? 
-          groups.find(g => g.id === selectedGroup) : undefined}
-        isEditing={isEditing}
-      />
+        <Stack direction="row" spacing={3} mb={2}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+              Members
+            </Typography>
+            <Typography variant="subtitle2" fontWeight={600}>
+              {group.members.length}
+            </Typography>
+          </Box>
+          {group.totalExpenses !== undefined && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                Total Expenses
+              </Typography>
+              <Typography variant="subtitle2" fontWeight={600} color="primary.main">
+                ${group.totalExpenses.toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
 
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-      >
-        <DialogTitle>Delete Group</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this group? This action cannot be undone and will also delete all associated expenses.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setDeleteConfirmOpen(false)}
-            color="inherit"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AvatarGroup 
+            max={4}
+            sx={{
+              '& .MuiAvatar-root': { 
+                width: 32, 
+                height: 32, 
+                fontSize: '0.875rem',
+                border: '2px solid',
+                borderColor: 'background.paper'
+              }
+            }}
           >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-            autoFocus
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+            {group.members.map((member) => (
+              <Tooltip key={member.id} title={member.name}>
+                <Avatar 
+                  sx={{ 
+                    bgcolor: member.id === user?.id ? 'primary.main' : 'secondary.main'
+                  }}
+                >
+                  {member.name[0]}
+                </Avatar>
+              </Tooltip>
+            ))}
+          </AvatarGroup>
+        </Box>
+      </CardContent>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
+      <Divider />
+      
+      <CardActions sx={{ p: 2, gap: 1 }}>
+        <Button 
+          size="small" 
+          variant="outlined"
+          startIcon={<LibraryBooksIcon />}
+          onClick={() => navigate(`/groups/${group.id}`)}
+          sx={{
+            borderColor: 'divider',
+            '&:hover': {
+              borderColor: 'primary.main',
+              bgcolor: 'primary.lighter'
+            }
+          }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          View Details
+        </Button>
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<AccountBalanceWalletIcon />}
+          onClick={() => navigate(`/groups/${group.id}?tab=expenses`)}
+          sx={{
+            boxShadow: 'none',
+            '&:hover': {
+              boxShadow: theme.shadows[2]
+            }
+          }}
+        >
+          Add Expense
+        </Button>
+      </CardActions>
+    </Card>
+  );
+
+  const renderSkeletonCard = () => (
+    <Card sx={{ height: '100%', borderRadius: 2 }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Skeleton variant="circular" width={48} height={48} />
+          <Box sx={{ flex: 1 }}>
+            <Skeleton variant="text" width="60%" height={32} />
+            <Skeleton variant="text" width="40%" height={24} />
+          </Box>
+        </Box>
+        <Skeleton variant="text" />
+        <Skeleton variant="text" />
+        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+          <Skeleton variant="circular" width={32} height={32} />
+          <Skeleton variant="circular" width={32} height={32} />
+          <Skeleton variant="circular" width={32} height={32} />
+        </Box>
+      </CardContent>
+      <CardActions sx={{ p: 2, pt: 0 }}>
+        <Skeleton variant="rectangular" width={120} height={36} sx={{ borderRadius: 1 }} />
+        <Skeleton variant="rectangular" width={120} height={36} sx={{ borderRadius: 1 }} />
+      </CardActions>
+    </Card>
+  );
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        {/* Header Section */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3
+          }}
+        >
+          <Typography variant="h4" component="h1" fontWeight={600}>
+            My Groups
+          </Typography>
+          <Tooltip title="Create New Group">
+            <Fab 
+              color="primary" 
+              aria-label="add group"
+              onClick={() => setOpenForm(true)}
+              sx={{
+                boxShadow: theme.shadows[2],
+                '&:hover': {
+                  boxShadow: theme.shadows[4]
+                }
+              }}
+            >
+              <AddIcon />
+            </Fab>
+          </Tooltip>
+        </Box>
+
+        {error && (
+          <Alert 
+            severity="error" 
+            onClose={() => setError(null)}
+            sx={{ mb: 3 }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Filters Section */}
+        <Paper 
+          sx={{ 
+            p: 2, 
+            mb: 3,
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            alignItems: { xs: 'stretch', md: 'center' },
+            borderRadius: 2
+          }}
+        >
+          <TextField
+            fullWidth
+            placeholder="Search groups..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ flexGrow: 1, maxWidth: { md: 300 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={filterCategory}
+              onChange={(e: SelectChangeEvent) => setFilterCategory(e.target.value)}
+              label="Category"
+              startAdornment={
+                <InputAdornment position="start">
+                  <FilterListIcon sx={{ ml: 1 }} />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="all">All Categories</MenuItem>
+              <MenuItem value="trip">Trip</MenuItem>
+              <MenuItem value="home">Home</MenuItem>
+              <MenuItem value="other">Other</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Button
+            onClick={handleSortClick}
+            startIcon={<SortIcon />}
+            sx={{
+              minWidth: 100,
+              borderColor: 'divider',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: 'primary.lighter'
+              }
+            }}
+          >
+            Sort
+          </Button>
+
+          <Menu
+            anchorEl={sortAnchorEl}
+            open={Boolean(sortAnchorEl)}
+            onClose={() => handleSortClose()}
+          >
+            <MenuItem 
+              onClick={() => handleSortClose('name_asc')}
+              selected={sortBy === 'name_asc'}
+            >
+              Name (A-Z)
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleSortClose('name_desc')}
+              selected={sortBy === 'name_desc'}
+            >
+              Name (Z-A)
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleSortClose('recent_first')}
+              selected={sortBy === 'recent_first'}
+            >
+              Most Recent
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleSortClose('oldest_first')}
+              selected={sortBy === 'oldest_first'}
+            >
+              Oldest First
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleSortClose('most_members')}
+              selected={sortBy === 'most_members'}
+            >
+              Most Members
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleSortClose('least_members')}
+              selected={sortBy === 'least_members'}
+            >
+              Least Members
+            </MenuItem>
+          </Menu>
+
+          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <Typography color="text.secondary">
+              {filteredAndSortedGroups.length} {filteredAndSortedGroups.length === 1 ? 'group' : 'groups'} found
+            </Typography>
+          </Box>
+        </Paper>
+
+        {/* Empty State */}
+        {!loading && filteredAndSortedGroups.length === 0 && (
+          <Paper
+            sx={{ 
+              textAlign: 'center',
+              py: 8,
+              px: 2,
+              borderRadius: 2,
+              bgcolor: 'background.default',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <GroupsIcon sx={{ fontSize: 48, color: 'action.disabled', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              No Groups Found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {searchQuery 
+                ? "No groups match your search criteria"
+                : "Start by creating your first group"}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenForm(true)}
+              sx={{
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                boxShadow: theme.shadows[2],
+                '&:hover': {
+                  boxShadow: theme.shadows[4]
+                }
+              }}
+            >
+              Create New Group
+            </Button>
+          </Paper>
+        )}
+
+        {/* Groups Grid */}
+        <Grid container spacing={3}>
+          {loading
+            ? Array.from(new Array(6)).map((_, index) => (
+                <Grid item xs={12} sm={6} lg={4} key={index}>
+                  {renderSkeletonCard()}
+                </Grid>
+              ))
+            : filteredAndSortedGroups.map((group) => (
+                <Grid item xs={12} sm={6} lg={4} key={group.id}>
+                  {renderGroupCard(group)}
+                </Grid>
+              ))}
+        </Grid>
+      </Box>
+
+      {/* Create Group Form */}
+      <GroupForm
+        open={openForm}
+        onClose={() => setOpenForm(false)}
+        onSubmit={handleCreateGroup}
+      />
+    </Container>
   );
 };
 

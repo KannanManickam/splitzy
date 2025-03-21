@@ -13,12 +13,16 @@ import {
   useTheme,
   Button,
   Alert,
-  Snackbar
+  Snackbar,
+  Chip
 } from '@mui/material';
 import { GroupBalance, GroupSettlementSuggestion } from '../../services/groupExpense';
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import PaymentIcon from '@mui/icons-material/Payment';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../../contexts/AuthContext';
 import SettlementForm from '../settlements/SettlementForm';
 
@@ -45,10 +49,7 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
   } | null>(null);
 
   const handleOpenSettlement = (settlement: GroupSettlementSuggestion) => {
-    // Determine if the current user is the payer
     const isUserPayer = settlement.from.id === user?.id;
-    
-    // Set the other user as the friend
     const friend = isUserPayer ? settlement.to : settlement.from;
     
     setSelectedSettlement({
@@ -73,19 +74,27 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
     const bgColor = isPositive ? 'success.lighter' : amount < 0 ? 'error.lighter' : 'grey.100';
     
     return (
-      <Typography
-        variant="body2"
-        sx={{
-          color,
-          bgcolor: bgColor,
-          px: 1.5,
-          py: 0.5,
-          borderRadius: 1,
-          display: 'inline-block'
-        }}
-      >
-        {isPositive ? '+' : ''}{amount.toFixed(2)}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {amount !== 0 && (
+          isPositive ? 
+            <TrendingUpIcon sx={{ color: 'success.main' }} /> : 
+            <TrendingDownIcon sx={{ color: 'error.main' }} />
+        )}
+        <Typography
+          variant="body2"
+          sx={{
+            color,
+            bgcolor: bgColor,
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            display: 'inline-block',
+            fontWeight: 500
+          }}
+        >
+          {isPositive ? '+' : ''}{amount.toFixed(2)}
+        </Typography>
+      </Box>
     );
   };
 
@@ -97,10 +106,69 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
         onClose={() => setShowSuccessAlert(false)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity="success" onClose={() => setShowSuccessAlert(false)}>
+        <Alert 
+          severity="success" 
+          onClose={() => setShowSuccessAlert(false)}
+          icon={<CheckCircleIcon />}
+          sx={{ 
+            width: '100%',
+            '& .MuiAlert-icon': {
+              color: 'success.main'
+            }
+          }}
+        >
           Settlement completed successfully!
         </Alert>
       </Snackbar>
+
+      {/* Summary Section */}
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 2,
+            flexGrow: 1,
+            bgcolor: 'success.lighter',
+            border: '1px solid',
+            borderColor: 'success.light',
+            borderRadius: 2,
+            minWidth: 200
+          }}
+        >
+          <Typography color="success.darker" variant="subtitle2" gutterBottom>
+            Total to Receive
+          </Typography>
+          <Typography color="success.darker" variant="h5" fontWeight={600}>
+            ${balances
+              .filter(b => b.balance > 0)
+              .reduce((sum, b) => sum + b.balance, 0)
+              .toFixed(2)}
+          </Typography>
+        </Paper>
+
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 2,
+            flexGrow: 1,
+            bgcolor: 'error.lighter',
+            border: '1px solid',
+            borderColor: 'error.light',
+            borderRadius: 2,
+            minWidth: 200
+          }}
+        >
+          <Typography color="error.darker" variant="subtitle2" gutterBottom>
+            Total to Pay
+          </Typography>
+          <Typography color="error.darker" variant="h5" fontWeight={600}>
+            ${Math.abs(balances
+              .filter(b => b.balance < 0)
+              .reduce((sum, b) => sum + b.balance, 0))
+              .toFixed(2)}
+          </Typography>
+        </Paper>
+      </Box>
 
       {/* Overall Balances */}
       <Paper 
@@ -128,7 +196,16 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
           {balances.map((balance, index) => (
             <React.Fragment key={balance.userId}>
               {index > 0 && <Divider />}
-              <ListItem sx={{ py: 1.5 }}>
+              <ListItem 
+                sx={{ 
+                  py: 1.5,
+                  px: 2,
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: 'action.hover'
+                  }
+                }}
+              >
                 <ListItemAvatar>
                   <Avatar 
                     sx={{ 
@@ -146,18 +223,13 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {balance.name}
                       {balance.userId === user?.id && (
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            bgcolor: 'primary.lighter',
-                            color: 'primary.main',
-                            px: 1,
-                            py: 0.25,
-                            borderRadius: 1
-                          }}
-                        >
-                          You
-                        </Typography>
+                        <Chip 
+                          label="You"
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ height: 20 }}
+                        />
                       )}
                     </Box>
                   }
@@ -204,9 +276,6 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
           <List disablePadding>
             {settlements.map((settlement, index) => {
               const isUserInvolved = settlement.from.id === user?.id || settlement.to.id === user?.id;
-              console.log('Settlement:', settlement);
-              console.log('User:', user);
-              console.log('isUserInvolved:', isUserInvolved);
               
               return (
                 <React.Fragment key={index}>
@@ -250,18 +319,13 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
                             </Avatar>
                             {settlement.from.name}
                             {settlement.from.id === user?.id && (
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  bgcolor: 'primary.lighter',
-                                  color: 'primary.main',
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: 1
-                                }}
-                              >
-                                You
-                              </Typography>
+                              <Chip 
+                                label="You"
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ height: 20 }}
+                              />
                             )}
                           </Typography>
                           <ArrowRightAltIcon sx={{ color: theme.palette.text.secondary }} />
@@ -278,18 +342,13 @@ const GroupBalances: React.FC<GroupBalancesProps> = ({
                             </Avatar>
                             {settlement.to.name}
                             {settlement.to.id === user?.id && (
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  bgcolor: 'primary.lighter',
-                                  color: 'primary.main',
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: 1
-                                }}
-                              >
-                                You
-                              </Typography>
+                              <Chip 
+                                label="You"
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ height: 20 }}
+                              />
                             )}
                           </Typography>
                         </Stack>

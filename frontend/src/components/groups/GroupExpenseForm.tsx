@@ -21,7 +21,9 @@ import {
   ListItemText,
   ListItemAvatar,
   Checkbox,
-  SelectChangeEvent
+  SelectChangeEvent,
+  FormHelperText,
+  Tooltip,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -33,6 +35,7 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import EventIcon from '@mui/icons-material/Event';
 import GroupIcon from '@mui/icons-material/Group';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface GroupMember {
@@ -58,6 +61,14 @@ export interface GroupExpenseFormData {
   split_between: string[];
 }
 
+interface FormErrors {
+  description?: string;
+  amount?: string;
+  date?: string;
+  paidBy?: string;
+  splitBetween?: string;
+}
+
 const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
   open,
   onClose,
@@ -79,9 +90,14 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
     }
   );
 
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (initialData && open) {
       setFormData(initialData);
+      setFormErrors({});
+      setTouched({});
     } else if (!initialData && open) {
       setFormData({
         description: '',
@@ -90,20 +106,66 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
         paidBy: user?.id || '',
         split_between: [],
       });
+      setFormErrors({});
+      setTouched({});
     }
   }, [initialData, open, user]);
 
+  const validateField = (name: string, value: any): string => {
+    switch (name) {
+      case 'description':
+        return !value.trim() ? 'Description is required' : '';
+      case 'amount':
+        if (!value) return 'Amount is required';
+        if (isNaN(value) || Number(value) <= 0) return 'Amount must be greater than 0';
+        return '';
+      case 'paidBy':
+        return !value ? 'Payer is required' : '';
+      case 'split_between':
+        return (!value || value.length === 0) ? 'Select at least one member' : '';
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    let isValid = true;
+
+    Object.keys(formData).forEach((key) => {
+      const error = validateField(key, formData[key as keyof GroupExpenseFormData]);
+      if (error) {
+        errors[key as keyof FormErrors] = error;
+        isValid = false;
+      }
+    });
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
+    
+    // Clear error when user starts typing
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (fieldName: string) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+    const error = validateField(fieldName, formData[fieldName as keyof GroupExpenseFormData]);
+    setFormErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {
     if (date) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         date: date.format('YYYY-MM-DD'),
       }));
@@ -112,20 +174,37 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
 
   const handleSelectChange = (event: SelectChangeEvent<string | string[]>) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: name === 'split_between' ? (typeof value === 'string' ? value.split(',') : value) : value,
     }));
+    
+    // Clear error when user makes a selection
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    
+    // Mark all fields as touched
+    const allTouched = Object.keys(formData).reduce(
+      (acc, key) => ({ ...acc, [key]: true }),
+      {}
+    );
+    setTouched(allTouched);
+
+    if (validateForm()) {
+      onSubmit(formData);
+      onClose();
+    }
   };
 
-  // Parse date string to dayjs object for DatePicker
-  const parsedDate = formData.date ? dayjs(formData.date) : dayjs();
+  // Calculate per person amount for the split preview
+  const perPersonAmount = formData.amount && formData.split_between.length > 0
+    ? (Number(formData.amount) / formData.split_between.length).toFixed(2)
+    : '0.00';
 
   return (
     <Dialog 
@@ -179,6 +258,9 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
               name="description"
               value={formData.description}
               onChange={handleChange}
+              onBlur={() => handleBlur('description')}
+              error={touched.description && !!formErrors.description}
+              helperText={touched.description && formErrors.description}
               fullWidth
               InputProps={{
                 startAdornment: (
@@ -188,6 +270,7 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
                 ),
               }}
             />
+
             <TextField
               required
               label="Amount"
@@ -195,6 +278,9 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
               type="number"
               value={formData.amount}
               onChange={handleChange}
+              onBlur={() => handleBlur('amount')}
+              error={touched.amount && !!formErrors.amount}
+              helperText={touched.amount && formErrors.amount}
               fullWidth
               inputProps={{ min: 0, step: 0.01 }}
               InputProps={{
@@ -209,12 +295,14 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
                 label="Date"
-                value={parsedDate}
+                value={dayjs(formData.date)}
                 onChange={handleDateChange}
                 slotProps={{
                   textField: {
                     required: true,
                     fullWidth: true,
+                    error: touched.date && !!formErrors.date,
+                    helperText: touched.date && formErrors.date,
                     InputProps: {
                       startAdornment: (
                         <InputAdornment position="start">
@@ -227,13 +315,18 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
               />
             </LocalizationProvider>
             
-            <FormControl fullWidth required>
+            <FormControl 
+              fullWidth 
+              required
+              error={touched.paidBy && !!formErrors.paidBy}
+            >
               <InputLabel>Paid By</InputLabel>
               <Select
                 name="paidBy"
                 value={formData.paidBy}
                 onChange={handleSelectChange}
-                label="Paid By" 
+                onBlur={() => handleBlur('paidBy')}
+                label="Paid By"
                 startAdornment={
                   <InputAdornment position="start">
                     <AccountBalanceWalletIcon sx={{ color: 'success.main', ml: 2 }} />
@@ -285,15 +378,23 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
                   </MenuItem>
                 ))}
               </Select>
+              {touched.paidBy && formErrors.paidBy && (
+                <FormHelperText>{formErrors.paidBy}</FormHelperText>
+              )}
             </FormControl>
 
-            <FormControl fullWidth required>
+            <FormControl 
+              fullWidth 
+              required
+              error={touched.split_between && !!formErrors.splitBetween}
+            >
               <InputLabel>Split Between</InputLabel>
               <Select
                 multiple
                 name="split_between"
                 value={formData.split_between}
                 onChange={handleSelectChange}
+                onBlur={() => handleBlur('split_between')}
                 label="Split Between"
                 renderValue={(selected) => `${selected.length} members selected`}
                 startAdornment={
@@ -352,18 +453,43 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
                           }
                         </Box>
                       }
-                      secondary={member.email} 
-                      secondaryTypographyProps={{
-                        sx: { fontSize: '0.75rem' }
-                      }}
                     />
                   </MenuItem>
                 ))}
               </Select>
+              {touched.split_between && formErrors.splitBetween && (
+                <FormHelperText>{formErrors.splitBetween}</FormHelperText>
+              )}
             </FormControl>
+
+            {/* Split Preview */}
+            {formData.amount && formData.split_between.length > 0 && (
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  p: 2,
+                  bgcolor: 'info.lighter',
+                  borderRadius: 2
+                }}
+              >
+                <HelpOutlineIcon color="info" />
+                <Typography variant="body2" color="info.main">
+                  Each person will pay: <strong>${perPersonAmount}</strong>
+                </Typography>
+                <Tooltip title="The total amount will be split equally between all selected participants">
+                  <IconButton size="small" color="info">
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
+
         <Divider />
+
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
           <Button 
             onClick={onClose}
@@ -383,7 +509,12 @@ const GroupExpenseForm: React.FC<GroupExpenseFormProps> = ({
             type="submit" 
             variant="contained" 
             color="primary"
-            disabled={!formData.description || !formData.amount || formData.split_between.length === 0}
+            disabled={
+              !formData.description || 
+              !formData.amount || 
+              formData.split_between.length === 0 ||
+              Object.keys(formErrors).some(key => !!formErrors[key as keyof FormErrors])
+            }
             sx={{
               boxShadow: theme.shadows[2],
               '&:hover': {

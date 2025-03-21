@@ -45,10 +45,49 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#4F6BFF',
+      light: '#829FFF',
+      dark: '#3D4ECC',
+      contrastText: '#fff',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#7C4DFF',
+      light: '#9E7CFF',
+      dark: '#5E3ACC',
+      contrastText: '#fff',
+    },
+    background: {
+      default: '#F8FAFC',
+      paper: '#FFFFFF',
+    },
+  },
+  shape: {
+    borderRadius: 8
+  },
+  typography: {
+    fontFamily: "'Inter', sans-serif",
+  },
+  components: {
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+        }
+      }
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          margin: '4px 8px',
+          borderRadius: 8,
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(79, 107, 255, 0.08)',
+            '&:hover': {
+              backgroundColor: 'rgba(79, 107, 255, 0.12)',
+            },
+          },
+        },
+      },
     },
   },
 });
@@ -79,6 +118,83 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     navigate('/login');
   };
 
+  const drawer = (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <AccountBalanceWallet sx={{ color: 'primary.main' }} />
+        <Typography variant="h6" color="primary.main" fontWeight={600}>
+          Splitzy
+        </Typography>
+      </Box>
+      
+      <List sx={{ flex: 1, px: 1 }}>
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton 
+              onClick={() => navigate(item.path)}
+              selected={location.pathname === item.path}
+              sx={{
+                py: 1.5,
+                px: 2,
+                transition: 'all 0.2s ease',
+                '&.Mui-selected': {
+                  '& .MuiListItemIcon-root': {
+                    color: 'primary.main',
+                  },
+                  '& .MuiTypography-root': {
+                    fontWeight: 600,
+                    color: 'primary.main',
+                  },
+                },
+                '&:hover': {
+                  transform: 'translateX(4px)',
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+              <ListItemText 
+                primary={item.text}
+                primaryTypographyProps={{
+                  fontSize: '0.9375rem',
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider sx={{ mx: 2, my: 1 }} />
+      
+      <List sx={{ px: 1 }}>
+        <ListItem disablePadding>
+          <ListItemButton 
+            onClick={handleLogout}
+            sx={{
+              py: 1.5,
+              px: 2,
+              color: 'error.main',
+              '&:hover': {
+                bgcolor: 'error.lighter',
+                transform: 'translateX(4px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Logout"
+              primaryTypographyProps={{
+                fontSize: '0.9375rem',
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Box>
+  );
+
   // Don't show the sidebar for login and register pages
   if (['/login', '/register'].includes(location.pathname)) {
     return <>{children}</>;
@@ -88,43 +204,17 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const drawer = (
-    <Box>
-      <Toolbar />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton 
-              onClick={() => navigate(item.path)}
-              selected={location.pathname === item.path}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Divider sx={{ mt: 2, mb: 2 }} />
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText primary="Logout" />
-          </ListItemButton>
-        </ListItem>
-      </List>
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -137,19 +227,39 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div"
+            sx={{ 
+              fontWeight: 600,
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
             {menuItems.find(item => item.path === location.pathname)?.text || 'Splitzy'}
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body1" sx={{ display: { xs: 'none', sm: 'block' } }}>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                display: { xs: 'none', sm: 'block' },
+                color: 'text.secondary',
+              }}
+            >
               {user?.name}
             </Typography>
             <Avatar 
               sx={{ 
-                bgcolor: 'primary.dark',
                 width: 35,
                 height: 35,
-                fontSize: '1rem'
+                bgcolor: 'primary.main',
+                fontSize: '0.875rem',
+                fontWeight: 600,
               }}
             >
               {user?.name?.charAt(0)}
@@ -160,7 +270,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ 
+          width: { sm: drawerWidth }, 
+          flexShrink: { sm: 0 },
+        }}
       >
         <Drawer
           variant="temporary"
@@ -191,7 +304,18 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 0 }}> 
+
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          p: 3,
+          pt: { xs: 2, sm: 3 },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          bgcolor: 'background.default',
+          minHeight: '100vh',
+        }}
+      > 
         <Toolbar />
         {children}
       </Box>

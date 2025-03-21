@@ -17,7 +17,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  OutlinedInput,
   Avatar,
   SelectChangeEvent,
   Typography,
@@ -25,7 +24,10 @@ import {
   Stack,
   InputAdornment,
   useTheme,
-  Divider
+  Divider,
+  CircularProgress,
+  Tooltip,
+  FormHelperText
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -35,8 +37,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import EventIcon from '@mui/icons-material/Event';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import GroupIcon from '@mui/icons-material/Group';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 interface Friend {
   id: string;
@@ -60,6 +63,14 @@ export interface ExpenseFormData {
   splitBetween: string[];
 }
 
+interface FormErrors {
+  description?: string;
+  amount?: string;
+  date?: string;
+  paidBy?: string;
+  splitBetween?: string;
+}
+
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
   open,
   onClose,
@@ -71,6 +82,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   
   const [formData, setFormData] = useState<ExpenseFormData>(
     initialData || {
@@ -82,12 +94,10 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }
   );
 
-  // Add this effect to update form data when initialData changes
   useEffect(() => {
     if (initialData && open) {
       setFormData(initialData);
     } else if (!initialData && open) {
-      // Reset form when opening without initial data
       setFormData({
         description: '',
         amount: '',
@@ -113,35 +123,90 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }
   };
 
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    let isValid = true;
+
+    if (!formData.description.trim()) {
+      errors.description = 'Description is required';
+      isValid = false;
+    }
+
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      errors.amount = 'Please enter a valid amount';
+      isValid = false;
+    }
+
+    if (!formData.date) {
+      errors.date = 'Date is required';
+      isValid = false;
+    }
+
+    if (!formData.paidBy) {
+      errors.paidBy = 'Please select who paid';
+      isValid = false;
+    }
+
+    if (formData.splitBetween.length === 0) {
+      errors.splitBetween = 'Please select at least one person to split with';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
+    // Clear error when user starts typing
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {
     if (date) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         date: date.format('YYYY-MM-DD'),
       }));
+      // Clear date error
+      if (formErrors.date) {
+        setFormErrors(prev => ({
+          ...prev,
+          date: undefined
+        }));
+      }
     }
   };
 
   const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
+    // Clear error when user makes a selection
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    if (validateForm()) {
+      onSubmit(formData);
+    }
   };
 
   const allParticipants = React.useMemo(() => {
@@ -156,8 +221,22 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     ];
   }, [friends, user]);
 
-  // Parse date string to dayjs object for DatePicker
   const parsedDate = formData.date ? dayjs(formData.date) : dayjs();
+
+  if (loading) {
+    return (
+      <Dialog open={open} maxWidth="sm" fullWidth>
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography sx={{ mt: 2 }}>Loading friends...</Typography>
+        </Box>
+      </Dialog>
+    );
+  }
+
+  const perPersonAmount = formData.amount && formData.splitBetween.length > 0
+    ? (parseFloat(formData.amount) / formData.splitBetween.length).toFixed(2)
+    : '0.00';
 
   return (
     <Dialog 
@@ -211,6 +290,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               name="description"
               value={formData.description}
               onChange={handleChange}
+              error={!!formErrors.description}
+              helperText={formErrors.description}
               fullWidth
               InputProps={{
                 startAdornment: (
@@ -220,6 +301,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 ),
               }}
             />
+            
             <TextField
               required
               label="Amount"
@@ -227,6 +309,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               type="number"
               value={formData.amount}
               onChange={handleChange}
+              error={!!formErrors.amount}
+              helperText={formErrors.amount}
               fullWidth
               inputProps={{ min: 0, step: 0.01 }}
               InputProps={{
@@ -247,6 +331,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   textField: {
                     required: true,
                     fullWidth: true,
+                    error: !!formErrors.date,
+                    helperText: formErrors.date,
                     InputProps: {
                       startAdornment: (
                         <InputAdornment position="start">
@@ -259,7 +345,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               />
             </LocalizationProvider>
             
-            <FormControl fullWidth required>
+            <FormControl 
+              fullWidth 
+              required
+              error={!!formErrors.paidBy}
+            >
               <InputLabel>Paid By</InputLabel>
               <Select
                 name="paidBy"
@@ -286,7 +376,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                       <Avatar 
                         sx={{ 
                           width: 28, 
-                          height: 28, 
+                          height: 28,
                           mr: 1,
                           bgcolor: participant.id === user?.id ? 'primary.main' : 'secondary.main',
                           fontSize: '0.875rem'
@@ -316,21 +406,23 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   </MenuItem>
                 ))}
               </Select>
+              {formErrors.paidBy && (
+                <FormHelperText>{formErrors.paidBy}</FormHelperText>
+              )}
             </FormControl>
             
-            <FormControl fullWidth required>
+            <FormControl 
+              fullWidth 
+              required
+              error={!!formErrors.splitBetween}
+            >
               <InputLabel>Split Between</InputLabel>
               <Select
                 multiple
                 name="splitBetween"
                 value={formData.splitBetween}
                 onChange={handleSelectChange}
-                input={<OutlinedInput label="Split Between" />}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <GroupIcon sx={{ color: 'info.main', ml: 2 }} />
-                  </InputAdornment>
-                }
+                label="Split Between"
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {(selected as string[]).map((value) => {
@@ -362,6 +454,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     })}
                   </Box>
                 )}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <GroupIcon sx={{ color: 'info.main', ml: 2 }} />
+                  </InputAdornment>
+                }
               >
                 {allParticipants.map((participant) => (
                   <MenuItem 
@@ -421,7 +518,34 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   </MenuItem>
                 ))}
               </Select>
+              {formErrors.splitBetween && (
+                <FormHelperText>{formErrors.splitBetween}</FormHelperText>
+              )}
             </FormControl>
+
+            {/* Split Preview */}
+            {formData.amount && formData.splitBetween.length > 0 && (
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  p: 2,
+                  bgcolor: 'info.lighter',
+                  borderRadius: 2
+                }}
+              >
+                <HelpOutlineIcon color="info" />
+                <Typography variant="body2" color="info.main">
+                  Each person will pay: <strong>${perPersonAmount}</strong>
+                </Typography>
+                <Tooltip title="The total amount will be split equally between all selected participants">
+                  <IconButton size="small" color="info">
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <Divider />
@@ -444,7 +568,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             type="submit" 
             variant="contained" 
             color="primary"
-            disabled={loading || !formData.paidBy || formData.splitBetween.length === 0}
+            disabled={loading}
             sx={{
               boxShadow: theme.shadows[2],
               '&:hover': {

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Button, Tabs, Tab } from '@mui/material';
-import { AccountBalanceWallet as WalletIcon } from '@mui/icons-material';
+import { Box, Typography, Card, CardContent, List, Button, Tabs, Tab } from '@mui/material';
+import { 
+  AccountBalanceWallet as WalletIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Info as InfoIcon 
+} from '@mui/icons-material';
 import { getBalanceWithFriend, ExpenseHistoryItem } from '../../services/balance';
 import { settlementService, BalanceWithSettlements } from '../../services/settlement';
 import { formatDate } from '../../utils/dateUtils';
@@ -120,26 +125,82 @@ const FriendBalance: React.FC<FriendBalanceProps> = ({ friendId, friendName, onS
 
   return (
     <Box sx={{ mt: 3 }}>
-      <Card variant="outlined" sx={{ mb: 3 }}>
-        <CardContent sx={{ pb: '16px !important' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', color: isNetPositive ? 'success.main' : isNetNegative ? 'error.main' : 'text.primary' }}>
-              {isNetPositive ? `${friendName} owes you $${netBalance.toFixed(2)}` :
-               isNetNegative ? `You owe ${friendName} $${Math.abs(netBalance).toFixed(2)}` :
-               `You are settled up with ${friendName}`}
-            </Typography>
-            
+      {/* Balance Card */}
+      <Card
+        sx={{
+          mb: 3,
+          background: 'linear-gradient(to right, #F8FAFC, #F1F5F9)',
+          borderRadius: '16px',
+          border: 'none',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+        }}
+      >
+        {isNetPositive && (
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '4px',
+            height: '100%',
+            background: 'linear-gradient(to bottom, #10B981, #059669)'
+          }} />
+        )}
+        {isNetNegative && (
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '4px',
+            height: '100%',
+            background: 'linear-gradient(to bottom, #EF4444, #DC2626)'
+          }} />
+        )}
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  color: '#1E293B',
+                  mb: 1
+                }}
+              >
+                {isNetPositive ? `${friendName} owes you` :
+                 isNetNegative ? `You owe ${friendName}` :
+                 `You are settled up`}
+              </Typography>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  color: isNetPositive ? '#10B981' :
+                         isNetNegative ? '#EF4444' :
+                         '#64748B'
+                }}
+              >
+                ${Math.abs(netBalance).toFixed(2)}
+              </Typography>
+            </Box>
+
             {(isNetPositive || isNetNegative) && (
               <Button
                 variant="contained"
-                color="primary"
-                startIcon={<WalletIcon />}
                 onClick={() => setShowSettlementForm(true)}
-                sx={{ 
-                  borderRadius: 2,
-                  boxShadow: 'none',
+                startIcon={<WalletIcon />}
+                sx={{
+                  background: 'linear-gradient(to right, #4F6BFF, #7C4DFF)',
+                  borderRadius: '12px',
+                  padding: '10px 20px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 6px rgba(124, 77, 255, 0.2)',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 8px rgba(124, 77, 255, 0.25)'
                   }
                 }}
               >
@@ -149,73 +210,136 @@ const FriendBalance: React.FC<FriendBalanceProps> = ({ friendId, friendName, onS
           </Box>
 
           {hasSettlements && (
-            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Expenses only: ${settledBalanceDetails.originalBalance.toFixed(2)} • Settlements impact: ${settledBalanceDetails.settlementBalance.toFixed(2)}
+            <Box sx={{
+              mt: 2,
+              pt: 2,
+              borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <InfoIcon sx={{ color: '#64748B', fontSize: '1rem' }} />
+              <Typography variant="body2" sx={{ color: '#64748B' }}>
+                Includes {settledBalanceDetails?.settlements.length} settlements
               </Typography>
             </Box>
           )}
         </CardContent>
       </Card>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="balance tabs">
+      {/* Tabs */}
+      <Box sx={{
+        borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+        mb: 3
+      }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange}
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '1rem',
+              color: '#64748B',
+              '&.Mui-selected': {
+                color: '#4F6BFF'
+              }
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#4F6BFF'
+            }
+          }}
+        >
           <Tab label="Expenses" />
           <Tab label="Settlements" />
         </Tabs>
       </Box>
-      
+
+      {/* Expenses Tab Panel */}
       <TabPanel value={tabValue} index={0}>
-        <Typography variant="h6" gutterBottom>
-          Expense History
-        </Typography>
-        
         <List sx={{ width: '100%' }}>
           {expenseHistory.length > 0 ? (
             expenseHistory.map((expense) => (
-              <React.Fragment key={expense.id}>
-                <Card variant="outlined" sx={{ mb: 1 }}>
-                  <CardContent sx={{ padding: 2, '&:last-child': { paddingBottom: 2 } }}>
-                    <ListItem disablePadding>
-                      <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                            {expense.description}
-                          </Typography>
+              <Card
+                key={expense.id}
+                sx={{
+                  mb: 2,
+                  borderRadius: '12px',
+                  border: 'none',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                  transition: 'box-shadow 0.2s ease',
+                  '&:hover': {
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: expense.type === 'youPaid' ? '#EBF5FF' : '#FDF2F2'
+                      }}
+                    >
+                      {expense.type === 'youPaid' 
+                        ? <ArrowUpwardIcon sx={{ color: '#3B82F6' }} />
+                        : <ArrowDownwardIcon sx={{ color: '#EF4444' }} />
+                      }
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        {expense.description}
+                      </Typography>
+                      
+                      <Typography variant="body2" sx={{ color: '#64748B', mb: 1 }}>
+                        {formatDate(expense.date)}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: expense.type === 'youPaid' ? '#10B981' : '#EF4444',
+                          fontWeight: 500
+                        }}
+                      >
+                        {expense.type === 'youPaid'
+                          ? `You paid $${expense.totalAmount.toFixed(2)}`
+                          : `${friendName} paid $${expense.totalAmount.toFixed(2)}`
                         }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDate(expense.date)} • Paid by {expense.paidBy}
-                            </Typography>
-                            <Typography 
-                              variant="body1" 
-                              sx={{ 
-                                fontWeight: 'medium',
-                                color: expense.type === 'youPaid' ? 'success.main' : 'error.main'
-                              }}
-                            >
-                              {expense.type === 'youPaid' 
-                                ? `You paid $${expense.totalAmount.toFixed(2)}, ${friendName} owes $${expense.friendOwes?.toFixed(2)}` 
-                                : `${friendName} paid $${expense.totalAmount.toFixed(2)}, you owe $${expense.youOwe?.toFixed(2)}`
-                              }
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  </CardContent>
-                </Card>
-              </React.Fragment>
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: 600,
+                        color: expense.type === 'youPaid' ? '#10B981' : '#EF4444'
+                      }}
+                    >
+                      ${expense.type === 'youPaid' 
+                        ? expense.friendOwes?.toFixed(2)
+                        : expense.youOwe?.toFixed(2)
+                      }
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
             ))
           ) : (
-            <Typography variant="body1" sx={{ pt: 2, pb: 2 }}>
+            <Typography variant="body1" sx={{ color: '#64748B', textAlign: 'center', py: 4 }}>
               No expenses found with this friend.
             </Typography>
           )}
         </List>
       </TabPanel>
-      
+
+      {/* Settlements Tab Panel */}
       <TabPanel value={tabValue} index={1}>
         <SettlementHistory 
           friendId={friendId} 
@@ -230,7 +354,7 @@ const FriendBalance: React.FC<FriendBalanceProps> = ({ friendId, friendName, onS
         onSuccess={handleSettlementSuccess}
         friend={{ id: friendId, name: friendName, email: '' }}
         suggestedAmount={Math.abs(netBalance)}
-        isRecordingPayment={isNetPositive} // Pass true when friend owes money (positive balance)
+        isRecordingPayment={isNetPositive}
       />
     </Box>
   );

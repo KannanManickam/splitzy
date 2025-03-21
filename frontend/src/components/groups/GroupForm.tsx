@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { friendService } from '../../services/friend';
-import { useAuth } from '../../contexts/AuthContext';
-import { Group } from '../../services/group';
 import {
   Dialog,
   DialogTitle,
@@ -10,25 +7,28 @@ import {
   TextField,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Autocomplete,
   Chip,
-  OutlinedInput,
-  Avatar,
-  SelectChangeEvent,
   Typography,
   IconButton,
-  Stack,
   InputAdornment,
-  useTheme,
-  Divider
+  Alert,
+  Stack,
+  Avatar,
+  Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import GroupIcon from '@mui/icons-material/Group';
-import CategoryIcon from '@mui/icons-material/Category';
-import TitleIcon from '@mui/icons-material/Title';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { useAuth } from '../../contexts/AuthContext';
+import { friendService } from '../../services/friend';
+
+interface GroupFormProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: any) => void;
+  initialData?: any;
+  isEditing?: boolean;
+}
 
 interface Friend {
   id: string;
@@ -36,346 +36,275 @@ interface Friend {
   email: string;
 }
 
-interface GroupFormProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: GroupFormData) => void;
-  initialData?: Group;
-  isEditing?: boolean;
-}
-
-export interface GroupFormData {
-  name: string;
-  description: string;
-  category: string;
-  members: string[];
-}
-
-const categories = ['Home', 'Trip', 'Other'];
-
-const GroupForm: React.FC<GroupFormProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  initialData,
-  isEditing = false,
-}) => {
-  const theme = useTheme();
+const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: GroupFormProps) => {
   const { user } = useAuth();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<Friend[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [formData, setFormData] = useState<GroupFormData>(
-    initialData ? {
-      name: initialData.name,
-      description: initialData.description || '',
-      category: initialData.category,
-      members: initialData.members.map(member => member.id),
-    } : {
-      name: '',
-      description: '',
-      category: 'Other',
-      members: user ? [user.id] : [],
-    }
-  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialData && open) {
-      setFormData({
-        name: initialData.name,
-        description: initialData.description || '',
-        category: initialData.category,
-        members: initialData.members.map(member => member.id),
-      });
-    } else if (!initialData && open) {
-      setFormData({
-        name: '',
-        description: '',
-        category: 'Other',
-        members: user ? [user.id] : [],
-      });
+    if (initialData) {
+      setName(initialData.name || '');
+      setDescription(initialData.description || '');
+      setSelectedMembers(initialData.members || []);
     }
-  }, [initialData, open, user]);
+    fetchFriends();
+  }, [initialData]);
 
-  useEffect(() => {
-    loadFriends();
-  }, []);
-
-  const loadFriends = async () => {
+  const fetchFriends = async () => {
     try {
-      const friendsList = await friendService.getFriends();
-      setFriends(friendsList);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading friends:', error);
+      const response = await friendService.getFriends();
+      setFriends(response);
+    } catch (err) {
+      console.error('Error fetching friends:', err);
+      setError('Failed to load friends list');
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    if (!name.trim()) {
+      setNameError('Group name is required');
+      isValid = false;
+    } else {
+      setNameError(null);
+    }
+    return isValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const groupData = {
+        name: name.trim(),
+        description: description.trim(),
+        members: [...selectedMembers, { id: user?.id, name: user?.name, email: user?.email }]
+      };
+
+      await onSubmit(groupData);
+      handleClose();
+    } catch (err) {
+      console.error('Error saving group:', err);
+      setError('Failed to save group');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleClose = () => {
+    setName('');
+    setDescription('');
+    setSelectedMembers([]);
+    setError(null);
+    setNameError(null);
+    onClose();
   };
 
-  const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const allParticipants = React.useMemo(() => {
-    if (!user) return friends;
-    return [
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      },
-      ...friends
-    ];
-  }, [friends, user]);
+  const availableFriends = friends.filter(
+    friend => !selectedMembers.find(member => member.id === friend.id)
+  );
 
   return (
     <Dialog 
       open={open} 
-      onClose={onClose}
-      maxWidth="sm"
+      onClose={handleClose}
       fullWidth
+      maxWidth="sm"
       PaperProps={{
         sx: {
           borderRadius: 2,
-          boxShadow: theme.shadows[8]
         }
       }}
     >
       <DialogTitle sx={{ 
-        p: 3,
-        display: 'flex',
+        display: 'flex', 
+        justifyContent: 'space-between', 
         alignItems: 'center',
-        justifyContent: 'space-between'
+        pb: 1
       }}>
-        <Typography variant="h6" sx={{ 
-          fontWeight: 600,
-          background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          color: 'transparent',
-        }}>
+        <Typography variant="h6" component="div" fontWeight={600}>
           {isEditing ? 'Edit Group' : 'Create New Group'}
         </Typography>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{
-            color: 'text.secondary',
-            '&:hover': { 
-              bgcolor: 'error.lighter',
-              color: 'error.main'
-            }
-          }}
+        <IconButton 
+          edge="end" 
+          color="inherit" 
+          onClick={handleClose}
+          aria-label="close"
         >
-          <CloseIcon fontSize="small" />
+          <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      <Divider />
-
       <form onSubmit={handleSubmit}>
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent dividers>
           <Stack spacing={3}>
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
             <TextField
-              required
               label="Group Name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
               fullWidth
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <TitleIcon sx={{ color: 'primary.main' }} />
-                  </InputAdornment>
-                ),
-              }}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={!!nameError}
+              helperText={nameError}
+              autoFocus
             />
 
             <TextField
-              fullWidth
-              name="description"
               label="Description"
-              value={formData.description}
-              onChange={handleChange}
+              fullWidth
               multiline
-              rows={2}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <TitleIcon sx={{ color: 'info.main' }} />
-                  </InputAdornment>
-                ),
-              }}
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What's this group about?"
             />
 
-            <FormControl fullWidth required>
-              <InputLabel>Category</InputLabel>
-              <Select
-                name="category"
-                value={formData.category}
-                onChange={handleSelectChange}
-                label="Category"
-                startAdornment={
-                  <InputAdornment position="start">
-                    <CategoryIcon sx={{ color: 'primary.main' }} />
-                  </InputAdornment>
-                }
+            <Box>
+              <Typography 
+                variant="subtitle2" 
+                color="text.secondary" 
+                gutterBottom
+                sx={{ mb: 1 }}
               >
-                {categories.map((category) => (
-                  <MenuItem 
-                    key={category} 
-                    value={category}
-                    sx={{
-                      '&:hover': {
-                        bgcolor: 'primary.lighter'
-                      }
-                    }}
-                  >
-                    {category}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                Group Members
+              </Typography>
 
-            <FormControl fullWidth required>
-              <InputLabel>Members</InputLabel>
-              <Select
-                multiple
-                name="members"
-                value={formData.members}
-                onChange={handleSelectChange}
-                input={<OutlinedInput label="Members" />}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <GroupIcon sx={{ color: 'info.main', ml: 2 }} />
-                  </InputAdornment>
-                }
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {(selected as string[]).map((value) => {
-                      const participant = allParticipants.find(p => p.id === value);
-                      return participant ? (
-                        <Chip 
-                          key={value}
-                          label={`${participant.name}${participant.id === user?.id ? ' (You)' : ''}`}
-                          size="small"
-                          avatar={
-                            <Avatar sx={{ 
-                              bgcolor: participant.id === user?.id ? 'primary.main' : 'secondary.main' 
-                            }}>
-                              {participant.name[0]}
-                            </Avatar>
-                          }
-                          sx={{
-                            bgcolor: 'info.lighter',
-                            color: 'info.main',
-                            '& .MuiChip-deleteIcon': {
-                              color: 'info.main',
-                              '&:hover': {
-                                color: 'error.main'
-                              }
-                            }
-                          }}
-                        />
-                      ) : null;
-                    })}
-                  </Box>
-                )}
+              {/* Selected Members */}
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 1,
+                  mb: selectedMembers.length > 0 ? 2 : 0
+                }}
               >
-                {allParticipants.map((participant) => (
-                  <MenuItem 
-                    key={participant.id} 
-                    value={participant.id}
-                    sx={{
-                      '&:hover': {
-                        bgcolor: 'info.lighter'
-                      }
+                {/* Current User */}
+                <Tooltip title="You">
+                  <Chip
+                    avatar={
+                      <Avatar sx={{ bgcolor: 'primary.main' }}>
+                        {user?.name?.[0]}
+                      </Avatar>
+                    }
+                    label={user?.name}
+                    variant="filled"
+                    sx={{ 
+                      bgcolor: 'primary.lighter',
+                      '& .MuiChip-label': { color: 'primary.main' }
                     }}
-                  >
-                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  />
+                </Tooltip>
+
+                {/* Selected Members */}
+                {selectedMembers.map((member) => (
+                  <Chip
+                    key={member.id}
+                    avatar={
+                      <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                        {member.name[0]}
+                      </Avatar>
+                    }
+                    label={member.name}
+                    onDelete={() => 
+                      setSelectedMembers(members => 
+                        members.filter(m => m.id !== member.id)
+                      )
+                    }
+                    sx={{ 
+                      bgcolor: 'secondary.lighter',
+                      '& .MuiChip-label': { color: 'secondary.main' }
+                    }}
+                  />
+                ))}
+              </Box>
+
+              {/* Friend Selector */}
+              <Autocomplete
+                multiple
+                id="friend-select"
+                options={availableFriends}
+                getOptionLabel={(option) => option.name}
+                value={[]}
+                onChange={(_, newValue) => {
+                  if (newValue.length > 0) {
+                    const lastSelected = newValue[newValue.length - 1];
+                    setSelectedMembers(prev => [...prev, lastSelected]);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    placeholder={
+                      availableFriends.length > 0
+                        ? "Add members..."
+                        : "No more friends to add"
+                    }
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <PersonAddIcon color="action" />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      )
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <Stack direction="row" spacing={1} alignItems="center">
                       <Avatar 
                         sx={{ 
-                          width: 28, 
-                          height: 28,
-                          mr: 1,
-                          bgcolor: participant.id === user?.id ? 'primary.main' : 'secondary.main',
-                          fontSize: '0.875rem'
+                          width: 24, 
+                          height: 24, 
+                          fontSize: '0.75rem',
+                          bgcolor: 'secondary.main'
                         }}
                       >
-                        {participant.name[0]}
+                        {option.name[0]}
                       </Avatar>
                       <Box>
-                        {participant.name}
-                        {participant.id === user?.id && 
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              ml: 1, 
-                              color: 'text.secondary',
-                              bgcolor: 'primary.lighter',
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: 1
-                            }}
-                          >
-                            You
-                          </Typography>
-                        }
+                        <Typography variant="body2">
+                          {option.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.email}
+                        </Typography>
                       </Box>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                    </Stack>
+                  </li>
+                )}
+              />
+            </Box>
           </Stack>
         </DialogContent>
 
-        <Divider />
-
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button 
-            onClick={onClose}
-            variant="outlined"
-            color="inherit"
-            sx={{
-              borderColor: 'divider',
-              '&:hover': {
-                bgcolor: 'error.lighter',
-                borderColor: 'error.light'
-              }
-            }}
-          >
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleClose} color="inherit">
             Cancel
           </Button>
-          <Button 
+          <Button
             type="submit"
             variant="contained"
-            color="primary"
-            disabled={loading || !formData.name || formData.members.length === 0}
-            sx={{
-              boxShadow: theme.shadows[2],
-              '&:hover': {
-                boxShadow: theme.shadows[4]
-              }
-            }}
+            disabled={loading}
           >
             {isEditing ? 'Save Changes' : 'Create Group'}
           </Button>

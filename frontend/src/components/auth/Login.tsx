@@ -9,7 +9,6 @@ import {
   Paper, 
   Alert,
   CircularProgress,
-  Snackbar,
   useTheme,
   InputAdornment,
   IconButton,
@@ -69,18 +68,29 @@ export default function Login() {
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+        background: `linear-gradient(135deg, ${theme.palette.primary.light}40 0%, ${theme.palette.primary.main} 100%)`,
         padding: 2
       }}
     >
-      <Container maxWidth="sm">
+      <Container 
+        maxWidth="sm" 
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100%',
+          width: '100%'
+        }}
+      >
         <Zoom in={true} timeout={500}>
           <Paper
             elevation={24}
             sx={{
+              width: '100%',
               p: { xs: 3, sm: 6 },
               display: 'flex',
               flexDirection: 'column',
@@ -97,7 +107,7 @@ export default function Login() {
                 left: 0,
                 right: 0,
                 height: '4px',
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                background: `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.primary.main})`
               }
             }}
           >
@@ -280,24 +290,24 @@ export default function Login() {
         </Zoom>
       </Container>
 
-      <Snackbar 
-        open={Boolean(error)} 
-        autoHideDuration={6000} 
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+      {error && (
         <Alert 
-          onClose={() => setError('')} 
           severity="error" 
           sx={{ 
-            width: '100%',
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            minWidth: 300,
+            maxWidth: '90%',
             borderRadius: 2,
             boxShadow: theme.shadows[3]
           }}
+          onClose={() => setError('')}
         >
           {error}
         </Alert>
-      </Snackbar>
+      )}
     </Box>
   );
 }

@@ -13,14 +13,22 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
-  Autocomplete
+  Autocomplete,
+  Stack,
+  Divider,
+  IconButton,
+  useTheme
 } from '@mui/material';
-import { AccountBalanceWallet as WalletIcon, EventNote as EventIcon } from '@mui/icons-material';
+import { 
+  AccountBalanceWallet as WalletIcon,
+  Event as EventIcon,
+  Close as CloseIcon,
+  CompareArrows as SwapIcon
+} from '@mui/icons-material';
 import { settlementService } from '../../services/settlement';
 import { friendService, Friend } from '../../services/friend';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Replace date-pickers imports with a simpler date input
 interface User {
   id: string;
   name: string;
@@ -34,7 +42,15 @@ interface SettlementFormProps {
   friend?: User;
   groupId?: string;
   suggestedAmount?: number;
-  isRecordingPayment?: boolean; // New prop to determine if recording payment (friend owes user)
+  isRecordingPayment?: boolean;
+}
+
+interface FormData {
+  payer_id: string;
+  receiver_id: string;
+  amount: string;
+  date: string;
+  notes: string;
 }
 
 const SettlementForm: React.FC<SettlementFormProps> = ({ 
@@ -44,17 +60,15 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
   friend, 
   groupId,
   suggestedAmount = 0,
-  isRecordingPayment = false // Default is false (settling up = user pays)
+  isRecordingPayment = false
 }) => {
+  const theme = useTheme();
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [loadingFriends, setLoadingFriends] = useState(false);
 
-  // Set initial payer/receiver based on context
   const getInitialFormData = () => ({
-    // If recording payment (friend owes user), friend should be payer
-    // If settling up (user owes friend), user should be payer
     payer_id: isRecordingPayment ? (friend?.id || '') : (user?.id || ''),
     receiver_id: isRecordingPayment ? (user?.id || '') : (friend?.id || ''),
     amount: suggestedAmount > 0 ? suggestedAmount.toString() : '',
@@ -62,17 +76,23 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
     notes: ''
   });
   
-  const [formData, setFormData] = useState(getInitialFormData());
+  const [formData, setFormData] = useState<FormData>(getInitialFormData());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Load friends list if no friend prop is provided
   useEffect(() => {
     if (!friend && open) {
       loadFriends();
     }
   }, [friend, open]);
+
+  useEffect(() => {
+    setFormData(getInitialFormData());
+    if (friend) {
+      setSelectedFriend(friend);
+    }
+  }, [open, isRecordingPayment, friend?.id, user?.id, suggestedAmount]);
 
   const loadFriends = async () => {
     try {
@@ -87,55 +107,29 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
     }
   };
 
-  // Reset form data when props change
-  useEffect(() => {
-    setFormData(getInitialFormData());
-    if (friend) {
-      setSelectedFriend(friend);
-    }
-  }, [open, isRecordingPayment, friend?.id, user?.id, suggestedAmount]); 
-
   const handleFriendChange = (_: any, newValue: Friend | null) => {
     setSelectedFriend(newValue);
     if (newValue) {
       setFormData(prev => ({
         ...prev,
-        receiver_id: newValue.id
+        payer_id: isRecordingPayment ? newValue.id : user?.id || '',
+        receiver_id: isRecordingPayment ? user?.id || '' : newValue.id
       }));
     }
   };
 
-  const validateAmount = (amount: string): boolean => {
-    const value = parseFloat(amount);
-    return !isNaN(value) && value > 0;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-      
-      // Clear error when amount is valid
-      if (name === 'amount' && validateAmount(value as string)) {
-        setError(null);
-      }
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!friend && !selectedFriend && !formData.receiver_id) {
-      setError('Please select a friend');
-      return;
-    }
-
-    // Validate amount before submission
-    if (!validateAmount(formData.amount)) {
-      setError('Please enter a valid amount greater than 0');
+    if (!formData.payer_id || !formData.receiver_id || !formData.amount) {
+      setError('Please fill in all required fields');
       return;
     }
 
@@ -152,7 +146,6 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
       
       setShowSuccess(true);
       
-      // Trigger success callback
       if (onSuccess) {
         await onSuccess();
       }
@@ -182,180 +175,205 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
       <Dialog 
         open={open} 
         onClose={onClose}
+        maxWidth="sm" 
         fullWidth
-        maxWidth="sm"
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+            borderRadius: 2,
+            boxShadow: theme.shadows[8]
           }
         }}
       >
         <DialogTitle sx={{ 
-          pb: 1,
+          p: 3,
           display: 'flex',
           alignItems: 'center',
-          gap: 1
+          justifyContent: 'space-between'
         }}>
-          <WalletIcon color="primary" />
-          {isRecordingPayment ? 'Record a Payment' : 'Settle Up'}
+          <Typography variant="h6" sx={{ 
+            fontWeight: 600,
+            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}>
+            {isRecordingPayment ? 'Record a Payment' : 'Settle Up'}
+          </Typography>
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: 'text.secondary',
+              '&:hover': { 
+                bgcolor: 'error.lighter',
+                color: 'error.main'
+              }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
 
-        <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
+        <Divider />
 
-            {!friend && (
-              <Autocomplete
-                options={friends}
-                loading={loadingFriends}
-                value={selectedFriend}
-                onChange={handleFriendChange}
-                getOptionLabel={(option) => option.name}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Select Friend"
-                    required
-                    margin="normal"
-                    error={!selectedFriend && !!error}
-                    helperText={!selectedFriend && error ? 'Please select a friend' : ''}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loadingFriends ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            )}
-
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                mb: 3,
-                mt: 1,
-                p: 2,
-                bgcolor: 'background.default',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider'
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  {formData.payer_id === user?.id ? user?.name[0] : (friend || selectedFriend)?.name[0] || '?'}
-                </Avatar>
-                <Typography variant="body2" fontWeight={500}>
-                  {formData.payer_id === user?.id ? 'You' : otherPartyName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">Paying</Typography>
-              </Box>
-
-              {friend && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <Button
-                    size="small"
-                    onClick={togglePayerReceiver}
-                    sx={{
-                      minWidth: 'unset',
-                      mb: 0.5,
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1
-                    }}
-                  >
-                    Swap
-                  </Button>
-                  <Typography variant="h6" fontWeight={500} color="primary.main">
-                    ${formData.amount || '0.00'}
-                  </Typography>
-                </Box>
+        <DialogContent sx={{ p: 3 }}>
+          <form onSubmit={handleSubmit}>
+            <Stack spacing={3}>
+              {error && (
+                <Alert severity="error" onClose={() => setError(null)}>
+                  {error}
+                </Alert>
               )}
 
               {!friend && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <Typography variant="h6" fontWeight={500} color="primary.main">
-                    ${formData.amount || '0.00'}
-                  </Typography>
-                </Box>
+                <Autocomplete
+                  options={friends}
+                  loading={loadingFriends}
+                  value={selectedFriend}
+                  onChange={handleFriendChange}
+                  getOptionLabel={(option) => option.name}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Friend"
+                      required
+                      error={!selectedFriend && !!error}
+                      helperText={!selectedFriend && error ? 'Please select a friend' : ''}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <WalletIcon sx={{ color: 'primary.main', ml: 1 }} />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <>
+                            {loadingFriends ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
               )}
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                  {formData.receiver_id === user?.id ? user?.name[0] : (friend || selectedFriend)?.name[0] || '?'}
-                </Avatar>
-                <Typography variant="body2" fontWeight={500}>
-                  {formData.receiver_id === user?.id ? 'You' : otherPartyName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">Receiving</Typography>
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 2,
+                  bgcolor: 'background.default',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                  <Avatar sx={{ bgcolor: 'primary.main' }}>
+                    {formData.payer_id === user?.id ? user?.name[0] : (friend || selectedFriend)?.name[0] || '?'}
+                  </Avatar>
+                  <Typography variant="body2" fontWeight={500}>
+                    {formData.payer_id === user?.id ? 'You' : otherPartyName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">Paying</Typography>
+                </Box>
+
+                {friend && (
+                  <IconButton
+                    onClick={togglePayerReceiver}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        bgcolor: 'primary.lighter'
+                      }
+                    }}
+                  >
+                    <SwapIcon />
+                  </IconButton>
+                )}
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    {formData.receiver_id === user?.id ? user?.name[0] : (friend || selectedFriend)?.name[0] || '?'}
+                  </Avatar>
+                  <Typography variant="body2" fontWeight={500}>
+                    {formData.receiver_id === user?.id ? 'You' : otherPartyName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">Receiving</Typography>
+                </Box>
               </Box>
-            </Box>
 
-            <TextField
-              margin="dense"
-              name="amount"
-              label="Amount"
-              type="number"
-              fullWidth
-              required
-              value={formData.amount}
-              onChange={handleChange}
-              disabled={isLoading}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-              }}
-            />
+              <TextField
+                required
+                label="Amount"
+                name="amount"
+                type="number"
+                value={formData.amount}
+                onChange={handleChange}
+                fullWidth
+                inputProps={{ min: 0, step: 0.01 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Typography color="primary.main">$</Typography>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <TextField
-              margin="dense"
-              name="date"
-              label="Date"
-              type="date"
-              fullWidth
-              required
-              value={formData.date}
-              onChange={handleChange}
-              disabled={isLoading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EventIcon color="action" />
-                  </InputAdornment>
-                )
-              }}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
+              <TextField
+                required
+                label="Date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleChange}
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EventIcon sx={{ color: 'primary.main' }} />
+                    </InputAdornment>
+                  )
+                }}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
 
-            <TextField
-              margin="dense"
-              name="notes"
-              label="Notes (optional)"
-              fullWidth
-              multiline
-              rows={3}
-              value={formData.notes}
-              onChange={handleChange}
-              disabled={isLoading}
-              placeholder="Add any notes about this settlement"
-            />
-          </Box>
+              <TextField
+                label="Notes (optional)"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Add any notes about this settlement"
+              />
+            </Stack>
+          </form>
         </DialogContent>
 
+        <Divider />
+
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={onClose} disabled={isLoading} variant="outlined">
+          <Button 
+            onClick={onClose}
+            variant="outlined"
+            color="inherit"
+            sx={{
+              borderColor: 'divider',
+              '&:hover': {
+                bgcolor: 'error.lighter',
+                borderColor: 'error.light'
+              }
+            }}
+          >
             Cancel
           </Button>
           <Button 
@@ -363,6 +381,12 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
             disabled={isLoading || !hasSufficientData}
             variant="contained"
             startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              boxShadow: theme.shadows[2],
+              '&:hover': {
+                boxShadow: theme.shadows[4]
+              }
+            }}
           >
             {isLoading ? 'Recording...' : 'Record Settlement'}
           </Button>
@@ -373,6 +397,7 @@ const SettlementForm: React.FC<SettlementFormProps> = ({
         open={showSuccess}
         autoHideDuration={6000}
         onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={() => setShowSuccess(false)}

@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
   Box,
+  Container,
+  Paper,
+  Typography,
   Button,
-  Card,
-  CardContent,
-  Tabs,
+  useTheme,
   Tab,
-  TextField,
-  InputAdornment,
+  Tabs,
+  Stack,
+  Divider
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Search as SearchIcon,
-  AccountBalanceWallet as WalletIcon,
+  SwapHoriz as SwapIcon,
+  ArrowUpward as PayIcon,
+  ArrowDownward as ReceiveIcon,
+  ReceiptLong as ReceiptIcon,
+  TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
-import { settlementService } from '../../services/settlement';
 import SettlementHistory from './SettlementHistory';
 import SettlementForm from './SettlementForm';
-import LoadingState from '../LoadingState';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -29,214 +29,215 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`settlements-tabpanel-${index}`}
-      aria-labelledby={`settlements-tab-${index}`}
+      id={`settlement-tabpanel-${index}`}
+      aria-labelledby={`settlement-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ py: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
     </div>
   );
 }
 
-const Settlements: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<number>(0);
-  const [showSettlementForm, setShowSettlementForm] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [refreshKey, setRefreshKey] = useState<number>(0);
+export default function Settlements() {
+  const theme = useTheme();
+  const [currentTab, setCurrentTab] = useState(0);
+  const [showSettlementForm, setShowSettlementForm] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Just check if the API is accessible
-        await settlementService.getUserSettlements();
-        setError(null);
-      } catch (err) {
-        console.error('Error initializing settlements page:', err);
-        setError('Failed to load settlements');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchBalanceSummary();
   }, []);
 
+  const fetchBalanceSummary = async () => {
+    try {
+      // TODO: Implement balance summary fetch
+    } catch (error) {
+      console.error('Error fetching balance summary:', error);
+    }
+  };
+
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
+    setCurrentTab(newValue);
   };
-
-  const handleSettlementSuccess = () => {
-    // Update the refresh key to trigger a re-render of the SettlementHistory
-    setRefreshKey(prevKey => prevKey + 1);
-  };
-
-  if (loading) {
-    return (
-      <Container maxWidth="md">
-        <LoadingState type="circular" message="Loading settlements..." />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="md">
-        <Box sx={{ p: 4, textAlign: 'center', color: 'error.main' }}>
-          <Typography variant="h6">{error}</Typography>
-          <Button 
-            variant="outlined" 
-            sx={{ mt: 2 }} 
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </Button>
-        </Box>
-      </Container>
-    );
-  }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        mb: 4
-      }}>
-        <Typography 
-          variant="h4" 
-          component="h1"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent',
-            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' }
-          }}
-        >
-          Settlements
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowSettlementForm(true)}
-          sx={{
-            borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            '&:hover': {
-              boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+    <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 } }}>
+      {/* Header Section */}
+      <Box sx={{ position: 'relative', mb: 4 }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            height: '140px',
+            borderRadius: '24px',
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            mb: -8,
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              width: '200%',
+              height: '200%',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%)',
+              top: '-50%',
+              left: '-50%',
+              animation: 'rotate 60s linear infinite'
             }
           }}
+        />
+        
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: { xs: 2, md: 3 },
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+            mx: { xs: 1, md: 2 },
+            position: 'relative'
+          }}
         >
-          Record Settlement
-        </Button>
-      </Box>
-
-      <Card 
-        variant="outlined" 
-        sx={{ 
-          mb: 4,
-          borderRadius: 3,
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-        }}
-      >
-        <CardContent sx={{ p: 0 }}>
-          <Box sx={{ 
-            p: 3, 
-            display: 'flex', 
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 2,
-            borderBottom: 1,
-            borderColor: 'divider'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <WalletIcon color="primary" sx={{ mr: 1 }} />
-              <Typography variant="h6">Settlement History</Typography>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            justifyContent="space-between" 
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            spacing={2}
+            mb={3}
+          >
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                Settlements
+              </Typography>
+              <Typography 
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                Manage and track all your settlements in one place
+              </Typography>
             </Box>
-            <TextField
-              placeholder="Search settlements"
-              size="small"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-                sx: { borderRadius: 2 }
-              }}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            />
-          </Box>
-          
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange} 
-              aria-label="settlement tabs"
+
+            <Button
+              variant="contained"
+              startIcon={<SwapIcon />}
+              onClick={() => setShowSettlementForm(true)}
               sx={{
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  fontSize: '1rem',
-                },
-                px: 2
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                boxShadow: theme.shadows[4],
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[8],
+                }
               }}
             >
-              <Tab label="All Settlements" />
-              <Tab label="Money You Received" />
-              <Tab label="Money You Paid" />
-            </Tabs>
-          </Box>
-          
-          <TabPanel value={activeTab} index={0}>
-            <SettlementHistory 
-              key={`all-${refreshKey}`} 
-              onDelete={handleSettlementSuccess}
+              Settle Up
+            </Button>
+          </Stack>
+
+          <Divider />
+
+          <Tabs 
+            value={currentTab} 
+            onChange={handleTabChange}
+            sx={{
+              mt: 2,
+              '& .MuiTab-root': {
+                minHeight: 48,
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500
+              },
+              '& .Mui-selected': {
+                color: 'primary.main',
+                fontWeight: 600
+              },
+              '& .MuiTabs-indicator': {
+                height: 3,
+                borderRadius: '3px 3px 0 0'
+              }
+            }}
+          >
+            <Tab 
+              icon={<ReceiptIcon />} 
+              iconPosition="start" 
+              label="All Settlements" 
             />
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            <SettlementHistory 
-              key={`received-${refreshKey}`} 
-              filterType="received"
-              onDelete={handleSettlementSuccess}
+            <Tab 
+              icon={<PayIcon />} 
+              iconPosition="start" 
+              label="Paid" 
             />
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
-            <SettlementHistory 
-              key={`paid-${refreshKey}`} 
-              filterType="paid"
-              onDelete={handleSettlementSuccess}
+            <Tab 
+              icon={<ReceiveIcon />} 
+              iconPosition="start" 
+              label="Received" 
             />
-          </TabPanel>
-        </CardContent>
-      </Card>
+            <Tab 
+              icon={<TrendingUpIcon />} 
+              iconPosition="start" 
+              label="Analysis" 
+            />
+          </Tabs>
+        </Paper>
+      </Box>
+
+      {/* Content Sections */}
+      <TabPanel value={currentTab} index={0}>
+        <SettlementHistory />
+      </TabPanel>
+
+      <TabPanel value={currentTab} index={1}>
+        <SettlementHistory filterType="paid" />
+      </TabPanel>
+
+      <TabPanel value={currentTab} index={2}>
+        <SettlementHistory filterType="received" />
+      </TabPanel>
+
+      <TabPanel value={currentTab} index={3}>
+        <Paper 
+          sx={{ 
+            p: 4, 
+            textAlign: 'center',
+            color: 'text.secondary',
+            borderRadius: 2
+          }}
+        >
+          <TrendingUpIcon sx={{ fontSize: 48, mb: 2, color: 'action.active' }} />
+          <Typography variant="h6" gutterBottom>
+            Settlement Analysis
+          </Typography>
+          <Typography>
+            Detailed analysis and insights about your settlement patterns.
+            Coming soon!
+          </Typography>
+        </Paper>
+      </TabPanel>
 
       {/* Settlement Form Dialog */}
       <SettlementForm
         open={showSettlementForm}
         onClose={() => setShowSettlementForm(false)}
-        onSuccess={handleSettlementSuccess}
+        onSuccess={() => {
+          setShowSettlementForm(false);
+          // Refresh data after successful settlement
+          fetchBalanceSummary();
+        }}
       />
     </Container>
   );
-};
-
-export default Settlements;
+}

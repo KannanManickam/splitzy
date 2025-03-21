@@ -4,6 +4,7 @@ import ExpenseForm from './ExpenseForm';
 import type { ExpenseFormData } from './ExpenseForm';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingState from '../LoadingState';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -26,25 +27,48 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Stack,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import { useNavigate } from 'react-router-dom';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortIcon from '@mui/icons-material/Sort';
 
 interface ExtendedExpenseFormData extends ExpenseFormData {
   id?: string;
 }
 
-const ExpenseList: React.FC = () => {
+interface ExpenseListProps {
+  isFormOpen: boolean;
+  onFormClose: () => void;
+}
+
+type SortOrder = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
+
+const ExpenseList: React.FC<ExpenseListProps> = ({ isFormOpen, onFormClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true); // Add loading state
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedExpense, setSelectedExpense] = useState<ExtendedExpenseFormData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('date_desc');
+  const [filterType, setFilterType] = useState<'all' | 'personal' | 'group'>('all');
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -54,8 +78,74 @@ const ExpenseList: React.FC = () => {
     message: '',
     severity: 'success'
   });
-  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  useEffect(() => {
+    filterAndSortExpenses();
+  }, [expenses, searchTerm, sortOrder, filterType]);
+
+  useEffect(() => {
+    if (snackbar.open) {
+      const timer = setTimeout(() => {
+        handleCloseSnackbar();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [snackbar.open]);
+
+  const loadExpenses = async () => {
+    try {
+      setLoading(true);
+      const data = await expenseService.getExpenses();
+      setExpenses(data);
+    } catch (err) {
+      console.error('Error loading expenses:', err);
+      showNotification('Failed to load expenses', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterAndSortExpenses = () => {
+    let filtered = [...expenses];
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(expense => 
+        expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        expense.paidBy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        expense.createdBy.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (filterType === 'personal') {
+      filtered = filtered.filter(expense => !expense.group);
+    } else if (filterType === 'group') {
+      filtered = filtered.filter(expense => expense.group);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortOrder) {
+        case 'date_desc':
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        case 'date_asc':
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'amount_desc':
+          return b.amount - a.amount;
+        case 'amount_asc':
+          return a.amount - b.amount;
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredExpenses(filtered);
+  };
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -69,43 +159,9 @@ const ExpenseList: React.FC = () => {
     });
   };
 
-  useEffect(() => {
-    loadExpenses();
-  }, []);
-
-  useEffect(() => {
-    if (snackbar.open) {
-      const timer = setTimeout(() => {
-        handleCloseSnackbar();
-      }, 4000); // Close after 4 seconds
-      
-      return () => clearTimeout(timer);
-    }
-  }, [snackbar.open]);
-
-  const loadExpenses = async () => {
-    try {
-      setLoading(true); // Set loading to true before fetching
-      const data = await expenseService.getExpenses();
-      setExpenses(data);
-    } catch (err) {
-      console.error('Error loading expenses:', err);
-      showNotification('Failed to load expenses', 'error');
-    } finally {
-      setLoading(false); // Set loading to false after fetching
-    }
-  };
-
-  const handleAddExpense = () => {
-    setSelectedExpense(null);
-    setIsEditing(false);
-    setIsFormOpen(true);
-  };
-
   const handleEditExpense = (expenseId: string) => {
     const expense = expenses.find((e) => e.id === expenseId);
     if (expense) {
-      // Format the date to YYYY-MM-DD as required by the date input field
       const formattedDate = formatDateForInput(expense.date);
       
       setSelectedExpense({
@@ -117,18 +173,14 @@ const ExpenseList: React.FC = () => {
         splitBetween: expense.splitBetween.map(user => user.id),
       });
       setIsEditing(true);
-      setIsFormOpen(true);
     }
   };
 
-  // Helper to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateString: string) => {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      // Return today's date if the date is invalid
-      return new Date().toISOString().split('T')[0];
-    }
-    return date.toISOString().split('T')[0];
+    return isNaN(date.getTime()) 
+      ? new Date().toISOString().split('T')[0]
+      : date.toISOString().split('T')[0];
   };
 
   const handleFormSubmit = async (formData: ExpenseFormData) => {
@@ -142,7 +194,7 @@ const ExpenseList: React.FC = () => {
           splitBetween: formData.splitBetween,
         });
         setExpenses(expenses.map(exp => exp.id === updated.id ? updated : exp));
-        setIsFormOpen(false);
+        onFormClose();
         showNotification('Expense updated successfully', 'success');
       } else {
         const created = await expenseService.createExpense({
@@ -153,7 +205,7 @@ const ExpenseList: React.FC = () => {
           splitBetween: formData.splitBetween,
         });
         setExpenses(prev => [...prev, created]);
-        setIsFormOpen(false);
+        onFormClose();
         showNotification('Expense added successfully', 'success');
       }
     } catch (error: any) {
@@ -194,39 +246,96 @@ const ExpenseList: React.FC = () => {
     });
   };
 
-  const navigate = useNavigate();
-
   return (
-    <Box sx={{ 
-      mx: -3, 
-      mt: -3,  // Remove top padding/margin
-    }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 0, // Reduce the bottom margin
-        px: 3,
-        py: 1 // Use padding for both top and bottom
-      }}>
-        <Typography variant="h4" component="h1" fontWeight={600}>
-          Expenses
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddExpense}
-          size="large"
-          sx={{ px: 3, py: 1 }}
+    <Box>
+      {/* Filters and Search */}
+      <Paper 
+        sx={{ 
+          p: 2, 
+          mb: 3,
+          borderRadius: 2,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          alignItems: { xs: 'stretch', md: 'center' },
+          justifyContent: 'space-between'
+        }}
+      >
+        <Stack 
+          direction={{ xs: 'column', sm: 'row' }} 
+          spacing={2} 
+          sx={{ flex: 1 }}
         >
-          Add Expense
-        </Button>
-      </Box>
-      
+          <TextField
+            placeholder="Search expenses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ minWidth: 200 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <FormControl sx={{ minWidth: 150 }}>
+            <InputLabel>Filter By</InputLabel>
+            <Select
+              value={filterType}
+              onChange={(e: SelectChangeEvent<'all' | 'personal' | 'group'>) => 
+                setFilterType(e.target.value as 'all' | 'personal' | 'group')
+              }
+              label="Filter By"
+              startAdornment={
+                <InputAdornment position="start">
+                  <FilterListIcon color="action" />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="all">All Expenses</MenuItem>
+              <MenuItem value="personal">Personal Only</MenuItem>
+              <MenuItem value="group">Group Only</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 150 }}>
+            <InputLabel>Sort By</InputLabel>
+            <Select
+              value={sortOrder}
+              onChange={(e: SelectChangeEvent<SortOrder>) => 
+                setSortOrder(e.target.value as SortOrder)
+              }
+              label="Sort By"
+              startAdornment={
+                <InputAdornment position="start">
+                  <SortIcon color="action" />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="date_desc">Newest First</MenuItem>
+              <MenuItem value="date_asc">Oldest First</MenuItem>
+              <MenuItem value="amount_desc">Highest Amount</MenuItem>
+              <MenuItem value="amount_asc">Lowest Amount</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+
+        <Typography color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+          {filteredExpenses.length} {filteredExpenses.length === 1 ? 'expense' : 'expenses'} found
+        </Typography>
+      </Paper>
+
       {loading ? (
         <LoadingState type="pulse" message="Loading expenses..." height="400px" />
-      ) : expenses.length > 0 ? (
-        <TableContainer component={Paper} sx={{ boxShadow: 1, borderRadius: 0, mt: 1 }}>
+      ) : filteredExpenses.length > 0 ? (
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: 2,
+            overflow: 'hidden',
+            boxShadow: 2
+          }}
+        >
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
@@ -241,18 +350,25 @@ const ExpenseList: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {expenses.map((expense) => (
-                <TableRow key={expense.id} sx={{ 
-                  '&:hover': { 
-                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                  },
-                  transition: 'background-color 0.2s ease'
-                }}>
+              {filteredExpenses.map((expense) => (
+                <TableRow 
+                  key={expense.id} 
+                  sx={{ 
+                    '&:hover': { 
+                      bgcolor: 'action.hover'
+                    },
+                    transition: 'background-color 0.2s ease'
+                  }}
+                >
                   <TableCell sx={{ maxWidth: 300, wordBreak: 'break-word' }}>
                     <Typography fontWeight={500}>{expense.description}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography fontWeight={600} color="primary.main" fontSize="1.1rem">
+                    <Typography 
+                      fontWeight={600} 
+                      color="primary.main" 
+                      fontSize="1.1rem"
+                    >
                       ${Number(expense.amount).toFixed(2)}
                     </Typography>
                   </TableCell>
@@ -264,7 +380,14 @@ const ExpenseList: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 28, height: 28, bgcolor: 'info.main', fontSize: '0.8rem' }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 28, 
+                          height: 28, 
+                          bgcolor: 'info.main', 
+                          fontSize: '0.8rem' 
+                        }}
+                      >
                         {expense.createdBy.name.charAt(0)}
                       </Avatar>
                       <Typography>{expense.createdBy.name}</Typography>
@@ -272,7 +395,14 @@ const ExpenseList: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 28, height: 28, bgcolor: 'success.main', fontSize: '0.8rem' }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 28, 
+                          height: 28, 
+                          bgcolor: 'success.main', 
+                          fontSize: '0.8rem' 
+                        }}
+                      >
                         {expense.paidBy.name.charAt(0)}
                       </Avatar>
                       <Typography>{expense.paidBy.name}</Typography>
@@ -312,8 +442,13 @@ const ExpenseList: React.FC = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                      {/* Show edit button to everyone but disable if not creator */}
-                      <Tooltip title={expense.createdBy.id === user?.id ? "Edit expense" : "Only expense creator can edit"}>
+                      <Tooltip 
+                        title={
+                          expense.createdBy.id === user?.id 
+                            ? "Edit expense" 
+                            : "Only expense creator can edit"
+                        }
+                      >
                         <span>
                           <IconButton 
                             size="small" 
@@ -323,25 +458,37 @@ const ExpenseList: React.FC = () => {
                             sx={{ 
                               border: '1px solid', 
                               borderColor: 'divider',
-                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5
+                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5,
+                              '&:hover': {
+                                bgcolor: 'primary.lighter'
+                              }
                             }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </span>
                       </Tooltip>
-                      {/* Show delete button to everyone but disable if not creator */}
-                      <Tooltip title={expense.createdBy.id === user?.id ? "Delete expense" : "Only expense creator can delete"}>
+                      
+                      <Tooltip 
+                        title={
+                          expense.createdBy.id === user?.id 
+                            ? "Delete expense" 
+                            : "Only creator can delete"
+                        }
+                      >
                         <span>
                           <IconButton 
                             size="small" 
-                            onClick={() => handleDeleteClick(expense.id)} 
+                            onClick={() => handleDeleteClick(expense.id)}
                             color="error"
                             disabled={expense.createdBy.id !== user?.id}
                             sx={{ 
                               border: '1px solid', 
                               borderColor: 'divider',
-                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5
+                              opacity: expense.createdBy.id === user?.id ? 1 : 0.5,
+                              '&:hover': {
+                                bgcolor: 'error.lighter'
+                              }
                             }}
                           >
                             <DeleteIcon fontSize="small" />
@@ -363,25 +510,32 @@ const ExpenseList: React.FC = () => {
             borderRadius: 2,
           }}
         >
-          <AccountBalanceWalletIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>No Expenses Found</Typography>
-          <Typography color="text.secondary" paragraph>
-            You haven't added any expenses yet. Click the button above to add your first expense.
+          <AccountBalanceWalletIcon 
+            sx={{ 
+              fontSize: 60, 
+              color: 'text.secondary', 
+              mb: 2 
+            }}
+          />
+          <Typography variant="h5" gutterBottom>
+            {searchTerm || filterType !== 'all' 
+              ? 'No matching expenses found' 
+              : 'No Expenses Yet'
+            }
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddExpense}
-          >
-            Add Your First Expense
-          </Button>
+          <Typography color="text.secondary" paragraph>
+            {searchTerm || filterType !== 'all'
+              ? 'Try adjusting your search or filters to find what you\'re looking for.'
+              : 'You haven\'t added any expenses yet. Click the button above to add your first expense.'
+            }
+          </Typography>
         </Paper>
       )}
 
       <ExpenseForm
         open={isFormOpen}
         onClose={() => {
-          setIsFormOpen(false);
+          onFormClose();
           setSelectedExpense(null);
           setIsEditing(false);
         }}
@@ -400,15 +554,18 @@ const ExpenseList: React.FC = () => {
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           variant="filled"
+          sx={{ width: '100%' }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
       >
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
@@ -416,11 +573,28 @@ const ExpenseList: React.FC = () => {
             Are you sure you want to delete this expense? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)} color="inherit">
+        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+          <Button 
+            onClick={() => setDeleteConfirmOpen(false)} 
+            color="inherit"
+            sx={{
+              '&:hover': {
+                bgcolor: 'action.hover'
+              }
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            sx={{
+              '&:hover': {
+                bgcolor: 'error.dark'
+              }
+            }}
+          >
             Delete
           </Button>
         </DialogActions>

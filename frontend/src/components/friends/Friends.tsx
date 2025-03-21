@@ -25,6 +25,7 @@ import {
   AlertColor,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { friendService } from '../../services/friend';
 import LoadingState from '../LoadingState';
 import FriendBalance from './FriendBalance';
@@ -238,22 +239,32 @@ const Friends = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="md">
-        <LoadingState type="circular" message="Loading friends..." />
+      <Container maxWidth="md" sx={{ py: { xs: 4, md: 6 } }}>
+        <LoadingState type="pulse" message="Loading friends..." height="400px" />
       </Container>
     );
   }
 
   if (showBalance && selectedFriend) {
     return (
-      <Container maxWidth="md">
-        <Box sx={{ mb: 3 }}>
+      <Container maxWidth="md" sx={{ py: { xs: 4, md: 6 } }}>
+        <Box sx={{ mb: 4 }}>
           <Button 
             variant="text" 
             onClick={handleBackToList}
-            sx={{ textTransform: 'none', fontWeight: 500 }}
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 500,
+              color: 'text.secondary',
+              '&:hover': {
+                color: 'primary.main',
+                transform: 'translateX(-4px)'
+              },
+              transition: 'all 0.2s ease'
+            }}
+            startIcon={<ArrowBackIcon />}
           >
-            ← Back to friends
+            Back to friends
           </Button>
         </Box>
         <FriendBalance 
@@ -266,47 +277,64 @@ const Friends = () => {
   }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: { xs: 4, md: 5 },
-        position: 'relative'
-      }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent',
-            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' }
-          }}
-        >
-          Friends
-        </Typography>
+    <Container maxWidth="md" sx={{ py: { xs: 4, md: 6 } }}>
+      {/* Header Section */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          mb: { xs: 4, md: 5 },
+          position: 'relative'
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #4F6BFF 0%, #7C4DFF 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+              fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
+              mb: 1
+            }}
+          >
+            Friends
+          </Typography>
+          <Typography 
+            color="text.secondary" 
+            variant="body1"
+            sx={{ maxWidth: 480 }}
+          >
+            Manage your connections and track shared expenses with friends
+          </Typography>
+        </Box>
         <IconButton
           onClick={() => setIsAddFriendOpen(true)}
-          color="primary"
           sx={{
             ml: 'auto',
+            width: 48,
+            height: 48,
+            backgroundColor: 'primary.lighter',
+            color: 'primary.main',
             transition: 'all 0.2s ease-in-out',
-            bgcolor: 'rgba(25, 118, 210, 0.08)',
             '&:hover': { 
-              transform: 'scale(1.1)',
-              bgcolor: 'rgba(25, 118, 210, 0.15)'
+              transform: 'rotate(90deg)',
+              backgroundColor: 'primary.light'
             }
           }}
         >
           <PersonAddIcon />
         </IconButton>
       </Box>
+
+      {/* Main Content */}
       <Paper
         elevation={0}
         sx={{
-          borderRadius: 4,
+          borderRadius: 3,
           overflow: 'hidden',
           bgcolor: 'background.paper',
           border: '1px solid',
@@ -320,15 +348,16 @@ const Friends = () => {
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
-          variant="fullWidth"
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
+            px: 2,
             '& .MuiTab-root': {
-              textTransform: 'none',
               fontSize: '1rem',
               fontWeight: 500,
-              py: 2
+              py: 2,
+              minHeight: 56,
+              textTransform: 'none'
             },
             '& .Mui-selected': {
               color: 'primary.main',
@@ -336,7 +365,8 @@ const Friends = () => {
             },
             '& .MuiTabs-indicator': {
               height: 3,
-              borderRadius: '3px 3px 0 0'
+              borderRadius: '3px 3px 0 0',
+              backgroundColor: 'primary.main'
             }
           }}
         >
@@ -344,6 +374,7 @@ const Friends = () => {
           <Tab label="Pending Requests" />
           <Tab label="Sent Requests" />
         </Tabs>
+
         <List sx={{ p: 0 }}>
           {getFilteredFriends().map((friend, index) => (
             <Box key={friend.id}>
@@ -351,12 +382,12 @@ const Friends = () => {
               <ListItem
                 sx={{
                   p: 3,
+                  cursor: friend.status === 'accepted' ? 'pointer' : 'default',
                   transition: 'all 0.2s ease-in-out',
                   '&:hover': { 
-                    bgcolor: 'rgba(0,0,0,0.02)',
-                    transform: 'translateX(8px)'
-                  },
-                  cursor: friend.status === 'accepted' ? 'pointer' : 'default'
+                    bgcolor: 'action.hover',
+                    transform: friend.status === 'accepted' ? 'translateX(8px)' : 'none'
+                  }
                 }}
                 onClick={() => handleFriendClick(friend)}
               >
@@ -365,13 +396,14 @@ const Friends = () => {
                     sx={{ 
                       width: 50, 
                       height: 50,
-                      bgcolor: 'primary.main',
+                      bgcolor: friend.status === 'accepted' ? 'primary.main' : 'secondary.main',
                       fontSize: '1.25rem',
                       fontWeight: 600,
                       transition: 'transform 0.2s ease-in-out',
                       '&:hover': {
                         transform: 'scale(1.1)'
-                      }
+                      },
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                     }}
                   >
                     {friend.name.charAt(0)}
@@ -395,6 +427,7 @@ const Friends = () => {
                         <Typography 
                           variant="body2" 
                           sx={{ 
+                            mt: 0.5,
                             fontWeight: 500, 
                             color: getBalanceColor(friend.balance)
                           }}
@@ -411,7 +444,6 @@ const Friends = () => {
                     <Button
                       variant="contained"
                       size="small"
-                      color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAcceptRequest(friend.id);
@@ -421,6 +453,7 @@ const Friends = () => {
                         textTransform: 'none',
                         minWidth: 100,
                         boxShadow: 'none',
+                        background: 'linear-gradient(135deg, #4F6BFF 0%, #7C4DFF 100%)',
                         '&:hover': {
                           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                           transform: 'translateY(-2px)'
@@ -443,6 +476,7 @@ const Friends = () => {
                         minWidth: 100,
                         '&:hover': {
                           bgcolor: 'error.lighter',
+                          borderColor: 'error.light',
                           transform: 'translateY(-2px)'
                         }
                       }}
@@ -455,19 +489,67 @@ const Friends = () => {
             </Box>
           ))}
           {getFilteredFriends().length === 0 && (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
+            <Box 
+              sx={{ 
+                p: 6, 
+                textAlign: 'center',
+                color: 'text.secondary',
+                bgcolor: 'background.default'
+              }}
+            >
+              <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
                 {activeTab === 0 ? "You haven't added any friends yet" :
                  activeTab === 1 ? "No pending friend requests" :
                  "No sent friend requests"}
               </Typography>
+              {activeTab === 0 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PersonAddIcon />}
+                  onClick={() => setIsAddFriendOpen(true)}
+                  sx={{
+                    mt: 2,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    '&:hover': {
+                      transform: 'translateY(-2px)'
+                    }
+                  }}
+                >
+                  Add Your First Friend
+                </Button>
+              )}
             </Box>
           )}
         </List>
       </Paper>
-      <Dialog open={isAddFriendOpen} onClose={() => setIsAddFriendOpen(false)}>
-        <DialogTitle>Add Friend</DialogTitle>
-        <DialogContent>
+
+      {/* Add Friend Dialog */}
+      <Dialog 
+        open={isAddFriendOpen} 
+        onClose={() => setIsAddFriendOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxWidth: 'sm',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1,
+          '& .MuiTypography-root': {
+            fontSize: '1.5rem',
+            fontWeight: 600
+          }
+        }}>
+          Add Friend
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Enter your friend's email address to send them a friend request
+          </Typography>
           <TextField
             autoFocus
             margin="dense"
@@ -477,24 +559,55 @@ const Friends = () => {
             variant="outlined"
             value={searchEmail}
             onChange={(e) => setSearchEmail(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2
+              }
+            }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setIsAddFriendOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddFriend} variant="contained">
+          <Button 
+            onClick={() => setIsAddFriendOpen(false)}
+            sx={{ 
+              textTransform: 'none',
+              color: 'text.secondary'
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddFriend} 
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              borderRadius: 2,
+              px: 3,
+              background: 'linear-gradient(135deg, #4F6BFF 0%, #7C4DFF 100%)',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }
+            }}
+          >
             Send Request
           </Button>
         </DialogActions>
       </Dialog>
+
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
         onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={() => setNotification({ ...notification, open: false })}
           severity={notification.severity}
-          sx={{ width: '100%' }}
+          variant="filled"
+          sx={{ 
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}
         >
           {notification.message}
         </Alert>
