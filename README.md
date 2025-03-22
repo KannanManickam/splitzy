@@ -47,8 +47,6 @@ An open-source expense-sharing application similar to Splitwise that helps users
 - Timezone settings
 - Notification preferences 
 - Profile picture upload
-- Custom expense categories
-- Language preferences
 
 #### Advanced Expense Features
 - Expense categories and tagging

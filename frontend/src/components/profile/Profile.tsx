@@ -22,6 +22,10 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import EditIcon from '@mui/icons-material/Edit';
 import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ProfileEdit from './ProfileEdit';
+import PreferencesForm from './PreferencesForm';
+import { useState } from 'react';
 
 // Helper function to format date safely
 const formatDate = (dateString: string | undefined): string => {
@@ -47,10 +51,28 @@ const Profile = () => {
   const { user, logout } = useAuth();
   const theme = useTheme();
   const navigate = useNavigate();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleEditClick = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setIsEditDialogOpen(false);
+  };
+
+  const handlePreferencesClick = () => {
+    setIsPreferencesDialogOpen(true);
+  };
+
+  const handlePreferencesClose = () => {
+    setIsPreferencesDialogOpen(false);
   };
 
   if (!user) {
@@ -156,6 +178,7 @@ const Profile = () => {
                 <Tooltip title="Edit Profile">
                   <IconButton 
                     size="small" 
+                    onClick={handleEditClick}
                     sx={{ 
                       ml: 1,
                       color: 'primary.main',
@@ -287,7 +310,7 @@ const Profile = () => {
                 Quick Actions
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -307,7 +330,7 @@ const Profile = () => {
                     My Friends
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -327,7 +350,7 @@ const Profile = () => {
                     My Expenses
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -347,7 +370,27 @@ const Profile = () => {
                     My Settlements
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<SettingsIcon />}
+                    onClick={handlePreferencesClick}
+                    sx={{
+                      py: 2,
+                      borderRadius: 2,
+                      borderWidth: 2,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderWidth: 2,
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    Preferences
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6} md={2}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -374,6 +417,16 @@ const Profile = () => {
           </Grid>
         </Paper>
       </Box>
+
+      {/* Dialogs */}
+      <ProfileEdit 
+        open={isEditDialogOpen}
+        onClose={handleEditClose}
+      />
+      <PreferencesForm
+        open={isPreferencesDialogOpen}
+        onClose={handlePreferencesClose}
+      />
     </Container>
   );
 };

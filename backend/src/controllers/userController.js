@@ -122,9 +122,137 @@ const getUserByEmail = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, email, password } = req.body;
+    const userId = req.user.id;
+
+    const user = await models.User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // If email is being changed, check if new email is already taken
+    if (email && email !== user.email) {
+      const existingUser = await models.User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (password) updateData.password = password;
+
+    await user.update(updateData);
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
+      }
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error while updating profile' });
+  }
+};
+
+const updatePreferences = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { currency_preference, timezone, notification_preferences } = req.body;
+    const userId = req.user.id;
+
+    const user = await models.User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updateData = {};
+    if (currency_preference) updateData.currency_preference = currency_preference;
+    if (timezone) updateData.timezone = timezone;
+    if (notification_preferences) updateData.notification_preferences = notification_preferences;
+
+    await user.update(updateData);
+
+    res.json({
+      message: 'Preferences updated successfully',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
+      }
+    });
+  } catch (error) {
+    console.error('Preferences update error:', error);
+    res.status(500).json({ message: 'Server error while updating preferences' });
+  }
+};
+
+const uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const userId = req.user.id;
+    const user = await models.User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // The file path would be handled by a file upload middleware
+    const profilePicturePath = req.file.path;
+    await user.update({ profile_picture: profilePicturePath });
+
+    res.json({
+      message: 'Profile picture uploaded successfully',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
+      }
+    });
+  } catch (error) {
+    console.error('Profile picture upload error:', error);
+    res.status(500).json({ message: 'Server error while uploading profile picture' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
-  getUserByEmail
+  getUserByEmail,
+  updateProfile,
+  updatePreferences,
+  uploadProfilePicture
 };

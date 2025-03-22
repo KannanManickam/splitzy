@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const auth = require('../middleware/auth');
+const multer = require('multer');
 const userController = require('../controllers/userController');
 const groupController = require('../controllers/groupController');
 const expenseController = require('../controllers/expenseController');
@@ -11,6 +12,31 @@ const groupExpenseRoutes = require('./groupExpenseRoutes');
 const settlementRoutes = require('./settlementRoutes');
 
 const router = express.Router();
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/profile-pictures');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.user.id + '-' + uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not an image file'), false);
+    }
+  }
+});
 
 // Friend routes
 router.use('/friends', friendRoutes);
@@ -46,6 +72,33 @@ router.get('/users/profile', auth, userController.getProfile);
 
 // Add route for getting user by email
 router.get('/users/by-email/:email', auth, userController.getUserByEmail);
+
+// New profile customization routes
+router.put('/users/profile',
+  auth,
+  [
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('email').optional().isEmail().withMessage('Invalid email format'),
+    body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+  ],
+  userController.updateProfile
+);
+
+router.put('/users/preferences',
+  auth,
+  [
+    body('currency_preference').optional().isString().isLength({ min: 3, max: 3 }).withMessage('Invalid currency code'),
+    body('timezone').optional().isString().withMessage('Invalid timezone'),
+    body('notification_preferences').optional().isObject().withMessage('Invalid notification preferences')
+  ],
+  userController.updatePreferences
+);
+
+router.post('/users/profile-picture',
+  auth,
+  upload.single('profile_picture'),
+  userController.uploadProfilePicture
+);
 
 // Group routes
 router.post('/groups',

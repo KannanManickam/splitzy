@@ -173,6 +173,10 @@ const ExpenseList: React.FC<ExpenseListProps> = ({ isFormOpen, onFormClose }) =>
         splitBetween: expense.splitBetween.map(user => user.id),
       });
       setIsEditing(true);
+      // Call the parent's onFormOpen handler by setting isFormOpen to true
+      if (!isFormOpen) {
+        onFormClose(); // This is actually toggling the form open in the parent
+      }
     }
   };
 

@@ -48,6 +48,10 @@ const Expenses: React.FC = () => {
     setCurrentTab(newValue);
   };
 
+  const toggleExpenseForm = () => {
+    setIsExpenseFormOpen(!isExpenseFormOpen);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 } }}>
       {/* Header Section */}
@@ -183,7 +187,7 @@ const Expenses: React.FC = () => {
       <TabPanel value={currentTab} index={0}>
         <ExpenseList 
           isFormOpen={isExpenseFormOpen}
-          onFormClose={() => setIsExpenseFormOpen(false)}
+          onFormClose={toggleExpenseForm}
         />
       </TabPanel>
       <TabPanel value={currentTab} index={1}>

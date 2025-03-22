@@ -81,7 +81,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const theme = useTheme();
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);  // This is for form submit loading
+  const [loadingFriends, setLoadingFriends] = useState(true);  // This is for initial friends loading
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   
   const [formData, setFormData] = useState<ExpenseFormData>(
@@ -116,10 +117,10 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     try {
       const friendsList = await friendService.getFriends();
       setFriends(friendsList);
-      setLoading(false);
+      setLoadingFriends(false);
     } catch (error) {
       console.error('Error loading friends:', error);
-      setLoading(false);
+      setLoadingFriends(false);
     }
   };
 
@@ -202,10 +203,20 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit(formData);
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      await onSubmit(formData);
+      // Only close the form after successful submission
+      onClose();
+    } catch (error) {
+      console.error('Error submitting expense:', error);
+      // Keep the form open if there's an error
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,7 +234,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   const parsedDate = formData.date ? dayjs(formData.date) : dayjs();
 
-  if (loading) {
+  if (loadingFriends) {
     return (
       <Dialog open={open} maxWidth="sm" fullWidth>
         <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -570,13 +581,28 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             color="primary"
             disabled={loading}
             sx={{
+              position: 'relative',
               boxShadow: theme.shadows[2],
               '&:hover': {
                 boxShadow: theme.shadows[4]
               }
             }}
           >
-            {isEditing ? 'Save Changes' : 'Add Expense'}
+            {loading ? (
+              <>
+                <CircularProgress 
+                  size={24} 
+                  sx={{ 
+                    position: 'absolute',
+                    left: 24,
+                    color: 'primary.light' 
+                  }} 
+                />
+                {isEditing ? 'Saving...' : 'Adding...'}
+              </>
+            ) : (
+              isEditing ? 'Save Changes' : 'Add Expense'
+            )}
           </Button>
         </DialogActions>
       </form>

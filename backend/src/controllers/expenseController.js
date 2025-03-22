@@ -255,13 +255,9 @@ const updateExpense = async (req, res) => {
     await expense.update({
       description,
       amount: parseFloat(amount),
-      date: new Date(date)
+      date: new Date(date),
+      paid_by: paidBy  // Update paid_by directly in the main update
     });
-
-    // If we're changing who paid, update the created_by field
-    if (paidBy !== expense.created_by) {
-      await expense.update({ created_by: paidBy });
-    }
 
     // Handle split updates if needed
     if (splitBetween && splitBetween.length > 0) {

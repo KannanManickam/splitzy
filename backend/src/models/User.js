@@ -92,6 +92,30 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    currency_preference: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      defaultValue: 'USD'
+    },
+    timezone: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: 'UTC'
+    },
+    notification_preferences: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        email_notifications: true,
+        expense_reminders: true,
+        settlement_notifications: true,
+        weekly_summary: false
+      }
+    },
+    profile_picture: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
