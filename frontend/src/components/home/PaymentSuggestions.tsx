@@ -2,22 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
-  List,
   ListItem,
-  ListItemAvatar,
-  ListItemText,
   Avatar,
-  Button,
   Divider,
   Chip,
   IconButton,
   Stack,
-  Tooltip,
-  useTheme
+  Tooltip
 } from '@mui/material';
 import { 
-  ArrowForward as ArrowForwardIcon,
-  ArrowBack as ArrowBackIcon,
   Email as EmailIcon,
   Check as CheckIcon
 } from '@mui/icons-material';
@@ -44,7 +37,6 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
   const [showSettlementForm, setShowSettlementForm] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<SettlementTarget | null>(null);
   const location = useLocation();
-  const theme = useTheme();
   
   useEffect(() => {
     fetchSuggestions();
@@ -109,8 +101,8 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
     );
   }
   
-  const paymentsToPay = suggestions.find(s => s.type === 'youShouldPay')?.payments || [];
-  const paymentsToReceive = suggestions.find(s => s.type === 'youShouldReceive')?.payments || [];
+  const paymentsToPay = suggestions.find(s => s.type === 'youShouldPay')?.payments as PaymentToMake[] || [];
+  const paymentsToReceive = suggestions.find(s => s.type === 'youShouldReceive')?.payments as PaymentToReceive[] || [];
   
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -126,7 +118,7 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
       <Box>
         {paymentsToPay.length > 0 && (
           <>
-            {paymentsToPay.map((payment: PaymentToMake, index: number) => (
+            {paymentsToPay.map((payment, index) => (
               <Box key={payment.to.id}>
                 <ListItem
                   sx={{
@@ -212,7 +204,7 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
         
         {paymentsToReceive.length > 0 && (
           <>
-            {paymentsToReceive.map((payment: PaymentToReceive, index: number) => (
+            {paymentsToReceive.map((payment, index) => (
               <Box key={payment.from.id}>
                 <ListItem
                   sx={{
