@@ -6,10 +6,23 @@ import {
   Avatar,
   Paper,
   IconButton,
+  Chip,
+  Stack,
+  Divider,
+  Tooltip,
+  Card,
+  CardContent,
+  Badge,
+  useTheme,
 } from '@mui/material';
 import {
   Group as GroupIcon,
   ArrowForward as ArrowForwardIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Payment as PaymentIcon,
+  ReceiptLong as ReceiptIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,7 +54,8 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user: _ } = useAuth(); // Keep the hook call but ignore the value
+  const theme = useTheme();
+  const { user: _ } = useAuth();
 
   const refreshDashboardData = async () => {
     try {
@@ -104,327 +118,326 @@ export default function Home() {
   };
 
   if (loading) {
-    return <LoadingState type="pulse" message="Loading dashboard data..." height="500px" />;
+    return <LoadingState type="pulse" message="Loading dashboard data..." height="400px" />;
   }
 
   return (
-    <>
-      {/* Hero Section with Total Balance */}
-      <Box
+    <Box sx={{ mt: -1, mx: -1 }}>
+      {/* Compact Balance Stats Row */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={4}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              height: '100%',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'white',
+              borderRadius: 2,
+              overflow: 'hidden',
+            }}
+          >
+            <CardContent sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <AccountBalanceWalletIcon fontSize="small" sx={{ mr: 1, opacity: 0.8 }} />
+                <Typography variant="body2" fontWeight={500}>Total Balance</Typography>
+              </Box>
+              <Typography variant="h5" fontWeight={700} sx={{ mb: 0 }}>
+                {formatCurrency(dashboardData.totalBalance)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={6} sm={4}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              height: '100%',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <CardContent sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingUpIcon color="success" fontSize="small" sx={{ mr: 1 }} />
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  You're Owed
+                </Typography>
+              </Box>
+              <Typography variant="h6" fontWeight={600} color="success.main">
+                {formatCurrency(dashboardData.amountOwed)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={6} sm={4}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              height: '100%',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <CardContent sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingDownIcon color="error" fontSize="small" sx={{ mr: 1 }} />
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  You Owe
+                </Typography>
+              </Box>
+              <Typography variant="h6" fontWeight={600} color="error.main">
+                {formatCurrency(dashboardData.amountOwing)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Payment Suggestions - Collapsible, Borderless Card */}
+      <Paper
+        elevation={0}
         sx={{
-          background: 'linear-gradient(135deg, #4F6BFF 0%, #7C4DFF 100%)',
-          color: 'white',
-          mt: -3, // Compensate for the main content padding
-          mx: -3,
-          pt: { xs: 6, md: 8 },
-          pb: { xs: 8, md: 10 },
-          px: 3,
-          position: 'relative',
+          p: 0,
+          borderRadius: 2,
+          mb: 2,
           overflow: 'hidden',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '30%',
-            background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.1) 100%)',
-          }
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
         }}
       >
-        <Box sx={{ maxWidth: "xl", marginLeft: 0 }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              opacity: 0.9,
-              mb: 1,
-              fontWeight: 500
-            }}
-          >
-            Total Balance
-          </Typography>
-          <Typography 
-            variant="h3" 
-            sx={{ 
-              fontWeight: 700,
-              mb: 3,
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            {formatCurrency(dashboardData.totalBalance)}
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Box
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: 2,
-                  p: 2,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  transition: 'transform 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)'
-                  }
-                }}
-              >
-                <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                  You are owed
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {formatCurrency(dashboardData.amountOwed)}
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Box
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: 2,
-                  p: 2,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  transition: 'transform 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)'
-                  }
-                }}
-              >
-                <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                  You owe
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {formatCurrency(dashboardData.amountOwing)}
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
+        <Box sx={{ 
+          p: 1.5, 
+          display: 'flex', 
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: theme.palette.background.paper
+        }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <PaymentIcon color="primary" fontSize="small" />
+            <Typography variant="subtitle2" fontWeight={600}>
+              Suggested Settlements
+            </Typography>
+          </Stack>
         </Box>
-      </Box>
+        <Box>
+          <PaymentSuggestions onSettlementSuccess={refreshDashboardData} />
+        </Box>
+      </Paper>
 
-      <Box sx={{ mt: -4, px: 3, pb: 6 }}>
-        <Box sx={{ maxWidth: "xl", marginLeft: 0 }}>
-          {/* Payment Suggestions Section */}
+      {/* Content Grid - Tighter Spacing */}
+      <Grid container spacing={2}>
+        {/* Recent Groups - Fixed width, variable height */}
+        <Grid item xs={12} sm={6}>
           <Paper
             elevation={0}
             sx={{
-              p: 3,
-              borderRadius: 3,
-              bgcolor: 'background.paper',
+              borderRadius: 2,
+              overflow: 'hidden',
               border: '1px solid',
               borderColor: 'divider',
-              mb: 4,
-              position: 'relative',
-              overflow: 'hidden'
+              height: '100%',
             }}
           >
-            <PaymentSuggestions onSettlementSuccess={refreshDashboardData} />
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <GroupIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Active Groups
+                </Typography>
+              </Stack>
+              <Tooltip title="View all groups">
+                <IconButton
+                  size="small"
+                  onClick={() => navigate('/groups')}
+                  sx={{
+                    color: 'primary.main',
+                  }}
+                >
+                  <ArrowForwardIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Box>
+              {dashboardData.groups.map((group, index) => (
+                <Box key={group.id}>
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                      }
+                    }}
+                    onClick={() => navigate(`/groups/${group.id}`)}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <Avatar
+                        sx={{
+                          bgcolor: 'primary.lighter',
+                          color: 'primary.main',
+                          width: 36,
+                          height: 36,
+                          mr: 1.5,
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {group.name.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1, mr: 1 }}>
+                        <Typography variant="body2" fontWeight={600} noWrap>
+                          {group.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                          {group.memberCount} members
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={formatCurrency(group.totalBalance)}
+                        size="small"
+                        color={group.totalBalance >= 0 ? "success" : "error"}
+                        variant="outlined"
+                        sx={{ minWidth: 80, fontWeight: 600 }}
+                      />
+                    </Box>
+                  </Box>
+                  {index < dashboardData.groups.length - 1 && (
+                    <Divider sx={{ mx: 2 }} />
+                  )}
+                </Box>
+              ))}
+              {dashboardData.groups.length === 0 && (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No active groups
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Paper>
-
-          <Grid container spacing={4}>
-            {/* Active Groups Section */}
-            <Grid item xs={12} md={6}>
-              <Paper
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'box-shadow 0.2s ease',
-                  '&:hover': {
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-                  }
-                }}
-              >
-                <Box
+        </Grid>
+        
+        {/* Recent Expenses - Fixed width, variable height */}
+        <Grid item xs={12} sm={6}>
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 2,
+              overflow: 'hidden',
+              border: '1px solid',
+              borderColor: 'divider',
+              height: '100%',
+            }}
+          >
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <ReceiptIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Recent Expenses
+                </Typography>
+              </Stack>
+              <Tooltip title="View all expenses">
+                <IconButton
+                  size="small"
+                  onClick={() => navigate('/expenses')}
                   sx={{
-                    px: 3,
-                    py: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper'
+                    color: 'primary.main',
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Active Groups
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate('/groups')}
+                  <ArrowForwardIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Box>
+              {dashboardData.recentExpenses.map((expense, index) => (
+                <Box key={expense.id}>
+                  <Box
                     sx={{
-                      bgcolor: 'primary.lighter',
-                      color: 'primary.main',
+                      px: 2,
+                      py: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
                       '&:hover': {
-                        bgcolor: 'primary.light',
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.2s ease'
+                        bgcolor: 'action.hover',
+                      }
                     }}
                   >
-                    <ArrowForwardIcon />
-                  </IconButton>
-                </Box>
-
-                <Box>
-                  {dashboardData.groups.map((group) => (
-                    <Box
-                      key={group.id}
-                      sx={{
-                        px: 3,
-                        py: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                        display: 'flex',
-                        alignItems: 'center',
-                        position: 'relative',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                          transform: 'translateX(8px)'
-                        }
-                      }}
-                      onClick={() => navigate(`/groups/${group.id}`)}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <Avatar
-                          sx={{
-                            bgcolor: 'primary.main',
-                            width: 44,
-                            height: 44,
-                            mr: 2,
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                          }}
-                        >
-                          <GroupIcon />
-                        </Avatar>
-                        <Box sx={{ flex: 1, mr: 2 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                            {group.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {group.memberCount} members
-                          </Typography>
-                        </Box>
-                        <Typography
-                          color="primary.main"
-                          fontWeight={600}
-                        >
-                          {formatCurrency(group.totalBalance)}
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <Avatar
+                        sx={{
+                          bgcolor: 'secondary.lighter',
+                          color: 'secondary.main',
+                          width: 36,
+                          height: 36,
+                          mr: 1.5,
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {expense.paidBy.name.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1, mr: 1 }}>
+                        <Typography variant="body2" fontWeight={600} noWrap>
+                          {expense.description}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDate(expense.date)} · {expense.paidBy.name}
                         </Typography>
                       </Box>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color="primary.main"
+                      >
+                        {formatCurrency(expense.amount)}
+                      </Typography>
                     </Box>
-                  ))}
+                  </Box>
+                  {index < dashboardData.recentExpenses.length - 1 && (
+                    <Divider sx={{ mx: 2 }} />
+                  )}
                 </Box>
-              </Paper>
-            </Grid>
-
-            {/* Recent Expenses Section */}
-            <Grid item xs={12} md={6}>
-              <Paper
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'box-shadow 0.2s ease',
-                  '&:hover': {
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-                  }
-                }}
-              >
-                <Box
-                  sx={{
-                    px: 3,
-                    py: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper'
-                  }}
-                >
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Recent Expenses
+              ))}
+              {dashboardData.recentExpenses.length === 0 && (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No recent expenses
                   </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate('/expenses')}
-                    sx={{
-                      bgcolor: 'primary.lighter',
-                      color: 'primary.main',
-                      '&:hover': {
-                        bgcolor: 'primary.light',
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <ArrowForwardIcon />
-                  </IconButton>
                 </Box>
-
-                <Box>
-                  {dashboardData.recentExpenses.map((expense) => (
-                    <Box
-                      key={expense.id}
-                      sx={{
-                        px: 3,
-                        py: 2,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                        display: 'flex',
-                        alignItems: 'center',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                          transform: 'translateX(8px)'
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <Avatar
-                          sx={{
-                            bgcolor: 'secondary.main',
-                            width: 44,
-                            height: 44,
-                            mr: 2,
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                          }}
-                        >
-                          {expense.paidBy.name[0]}
-                        </Avatar>
-                        <Box sx={{ flex: 1, mr: 2 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                            {expense.description}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {formatDate(expense.date)} • {expense.paidBy.name}
-                          </Typography>
-                        </Box>
-                        <Typography
-                          color="primary.main"
-                          fontWeight={600}
-                        >
-                          {formatCurrency(expense.amount)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
-      </Box>
-    </>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

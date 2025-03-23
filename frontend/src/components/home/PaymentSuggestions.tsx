@@ -9,11 +9,18 @@ import {
   Avatar,
   Button,
   Divider,
-  Card,
-  CardContent
+  Chip,
+  IconButton,
+  Stack,
+  Tooltip,
+  useTheme
 } from '@mui/material';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { 
+  ArrowForward as ArrowForwardIcon,
+  ArrowBack as ArrowBackIcon,
+  Email as EmailIcon,
+  Check as CheckIcon
+} from '@mui/icons-material';
 import { PaymentSuggestion, PaymentToMake, PaymentToReceive, getPaymentSuggestions } from '../../services/balance';
 import LoadingState from '../LoadingState';
 import SettlementForm from '../settlements/SettlementForm';
@@ -37,16 +44,17 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
   const [showSettlementForm, setShowSettlementForm] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<SettlementTarget | null>(null);
   const location = useLocation();
-
+  const theme = useTheme();
+  
   useEffect(() => {
     fetchSuggestions();
   }, []);
-
+  
   // Add effect to refresh when location changes (e.g., user navigates back to Dashboard)
   useEffect(() => {
     fetchSuggestions();
   }, [location.key]);
-
+  
   const fetchSuggestions = async () => {
     try {
       setLoading(true);
@@ -60,12 +68,12 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
       setLoading(false);
     }
   };
-
+  
   const handleOpenSettlement = (target: SettlementTarget) => {
     setSelectedTarget(target);
     setShowSettlementForm(true);
   };
-
+  
   const handleSettlementSuccess = () => {
     // Refresh payment suggestions after a successful settlement
     fetchSuggestions();
@@ -74,144 +82,217 @@ const PaymentSuggestions: React.FC<PaymentSuggestionsProps> = ({ onSettlementSuc
       onSettlementSuccess();
     }
   };
-
+  
   if (loading) {
     return (
-      <Box sx={{ p: 2 }}>
-        <LoadingState type="circular" message="Loading payment suggestions..." />
+      <Box sx={{ p: 1.5 }}>
+        <LoadingState type="circular" message="Loading suggestions..." height="80px" />
       </Box>
     );
   }
-
+  
   if (error) {
     return (
-      <Box sx={{ p: 2, color: 'error.main' }}>
+      <Box sx={{ p: 1.5, color: 'error.main', fontSize: '0.875rem' }}>
         {error}
       </Box>
     );
   }
-
+  
   if (suggestions.length === 0) {
     return (
-      <Card variant="outlined" sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Payment Suggestions
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            You're all settled up! No payments needed.
-          </Typography>
-        </CardContent>
-      </Card>
+      <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          All settled up! No payments needed.
+        </Typography>
+      </Box>
     );
   }
-
+  
   const paymentsToPay = suggestions.find(s => s.type === 'youShouldPay')?.payments || [];
   const paymentsToReceive = suggestions.find(s => s.type === 'youShouldReceive')?.payments || [];
-
+  
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+  
   return (
     <>
-      <Card variant="outlined" sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Payment Suggestions
-          </Typography>
-          {paymentsToPay.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'error.main' }}>
-                Payments to make
-              </Typography>
-              <List>
-                {(paymentsToPay as PaymentToMake[]).map((payment) => (
-                  <React.Fragment key={payment.to.id}>
-                    <ListItem>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'error.main' }}>
-                          <ArrowForwardIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`Pay ${payment.to.name}`}
-                        secondary={`You owe $${payment.amount.toFixed(2)}`}
-                      />
-                      <Button 
-                        variant="contained" 
-                        size="small" 
-                        sx={{ ml: 1 }}
-                        onClick={() => handleOpenSettlement({
-                          id: payment.to.id,
-                          name: payment.to.name,
-                          email: payment.to.email,
-                          amount: payment.amount
-                        })}
-                      >
-                        Settle Up
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        size="small" 
-                        sx={{ ml: 1 }}
-                        onClick={() => window.open(`mailto:${payment.to.email}?subject=Payment&body=I'm sending you $${payment.amount.toFixed(2)} for my share of expenses.`)}
-                      >
-                        Email
-                      </Button>
-                    </ListItem>
-                    {payment !== paymentsToPay[paymentsToPay.length - 1] && <Divider component="li" />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Box>
-          )}
-
-          {paymentsToReceive.length > 0 && (
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.main' }}>
-                Payments to receive
-              </Typography>
-              <List>
-                {(paymentsToReceive as PaymentToReceive[]).map((payment) => (
-                  <React.Fragment key={payment.from.id}>
-                    <ListItem>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'success.main' }}>
-                          <ArrowBackIcon />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`${payment.from.name} owes you`}
-                        secondary={`$${payment.amount.toFixed(2)}`}
-                      />
-                      <Button
-                        variant="contained"
-                        size="small"
-                        sx={{ ml: 1 }}
-                        onClick={() => handleOpenSettlement({
-                          id: payment.from.id,
-                          name: payment.from.name,
-                          email: payment.from.email,
-                          amount: payment.amount
-                        })}
-                      >
-                        Record Payment
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{ ml: 1 }}
-                        onClick={() => window.open(`mailto:${payment.from.email}?subject=Payment Reminder&body=This is a friendly reminder that you owe me $${payment.amount.toFixed(2)} for your share of expenses.`)}
-                      >
-                        Remind
-                      </Button>
-                    </ListItem>
-                    {payment !== paymentsToReceive[paymentsToReceive.length - 1] && <Divider component="li" />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
+      <Box>
+        {paymentsToPay.length > 0 && (
+          <>
+            {paymentsToPay.map((payment: PaymentToMake, index: number) => (
+              <Box key={payment.to.id}>
+                <ListItem
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: 'error.lighter',
+                        color: 'error.main',
+                        width: 32,
+                        height: 32,
+                        mr: 1.5,
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {payment.to.name.charAt(0)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, mr: 1 }}>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Pay {payment.to.name}
+                        </Typography>
+                        <Chip
+                          label={formatAmount(payment.amount)}
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
+                        />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        For your share of expenses
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Settle up">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          sx={{ 
+                            bgcolor: 'primary.lighter', 
+                            '&:hover': { bgcolor: 'primary.light' } 
+                          }}
+                          onClick={() => handleOpenSettlement({
+                            id: payment.to.id,
+                            name: payment.to.name,
+                            email: payment.to.email,
+                            amount: payment.amount
+                          })}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Email reminder">
+                        <IconButton
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'action.hover',
+                            color: 'text.secondary',
+                            '&:hover': { bgcolor: 'action.selected' } 
+                          }}
+                          onClick={() => window.open(`mailto:${payment.to.email}?subject=Payment&body=I'm sending you ${formatAmount(payment.amount)} for my share of expenses.`)}
+                        >
+                          <EmailIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </Box>
+                </ListItem>
+                {index < paymentsToPay.length - 1 && <Divider sx={{ mx: 2 }} />}
+              </Box>
+            ))}
+          </>
+        )}
+        
+        {paymentsToPay.length > 0 && paymentsToReceive.length > 0 && (
+          <Divider />
+        )}
+        
+        {paymentsToReceive.length > 0 && (
+          <>
+            {paymentsToReceive.map((payment: PaymentToReceive, index: number) => (
+              <Box key={payment.from.id}>
+                <ListItem
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: 'success.lighter',
+                        color: 'success.main',
+                        width: 32,
+                        height: 32,
+                        mr: 1.5,
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {payment.from.name.charAt(0)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, mr: 1 }}>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Typography variant="body2" fontWeight={600}>
+                          {payment.from.name} owes you
+                        </Typography>
+                        <Chip
+                          label={formatAmount(payment.amount)}
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
+                        />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        For their share of expenses
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Record payment">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          sx={{ 
+                            bgcolor: 'primary.lighter', 
+                            '&:hover': { bgcolor: 'primary.light' } 
+                          }}
+                          onClick={() => handleOpenSettlement({
+                            id: payment.from.id,
+                            name: payment.from.name,
+                            email: payment.from.email,
+                            amount: payment.amount
+                          })}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Send reminder">
+                        <IconButton
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'action.hover',
+                            color: 'text.secondary',
+                            '&:hover': { bgcolor: 'action.selected' } 
+                          }}
+                          onClick={() => window.open(`mailto:${payment.from.email}?subject=Payment Reminder&body=This is a friendly reminder that you owe me ${formatAmount(payment.amount)} for your share of expenses.`)}
+                        >
+                          <EmailIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </Box>
+                </ListItem>
+                {index < paymentsToReceive.length - 1 && <Divider sx={{ mx: 2 }} />}
+              </Box>
+            ))}
+          </>
+        )}
+      </Box>
+      
       {/* Settlement Form Dialog */}
       {selectedTarget && (
         <SettlementForm

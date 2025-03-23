@@ -6,8 +6,6 @@ import {
   Avatar, 
   Grid,
   useTheme,
-  Card,
-  CardContent,
   Divider,
   Button,
   IconButton,
@@ -15,13 +13,10 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import EmailIcon from '@mui/icons-material/Email';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import GroupIcon from '@mui/icons-material/Group';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import EditIcon from '@mui/icons-material/Edit';
-import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ProfileEdit from './ProfileEdit';
 import PreferencesForm from './PreferencesForm';
@@ -48,16 +43,11 @@ const formatDate = (dateString: string | undefined): string => {
 };
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const theme = useTheme();
   const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleEditClick = () => {
     setIsEditDialogOpen(true);
@@ -82,14 +72,14 @@ const Profile = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: { xs: 3, md: 6 }, mb: { xs: 3, md: 6 } }}>
       <Box sx={{ position: 'relative' }}>
-        {/* Background Card */}
+        {/* Header Background */}
         <Paper 
           elevation={0} 
           sx={{ 
-            height: '240px',
+            height: '160px',
             borderRadius: '24px',
             background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            mb: -10,
+            mb: -12,
             position: 'relative',
             overflow: 'hidden',
             '&::after': {
@@ -105,52 +95,34 @@ const Profile = () => {
           }}
         />
         
-        {/* Profile Content */}
+        {/* Main Content */}
         <Paper 
           elevation={3} 
           sx={{ 
-            p: { xs: 3, md: 5 },
+            p: { xs: 2, sm: 3 },
             borderRadius: 3,
             bgcolor: 'background.paper',
             mx: { xs: 2, md: 4 },
-            transition: 'all 0.3s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-8px)',
-              boxShadow: theme.shadows[8],
-            },
+            mt: { xs: 6, sm: 8 },
+            position: 'relative',
           }}
         >
-          {/* Profile Header */}
-          <Box 
-            display="flex" 
-            flexDirection="column" 
-            alignItems="center" 
-            mb={4}
-            sx={{
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -16,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '60px',
-                height: '4px',
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                borderRadius: '2px'
-              }
-            }}
-          >
+          {/* Profile Header - New Layout */}
+          <Box sx={{ position: 'relative' }}>
+            {/* Avatar positioned at the top */}
             <Avatar
               sx={{
-                width: { xs: 120, md: 140 },
-                height: { xs: 120, md: 140 },
-                mb: 3,
+                width: { xs: 80, sm: 100 },
+                height: { xs: 80, sm: 100 },
                 border: `4px solid ${theme.palette.background.paper}`,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                fontSize: { xs: '2.5rem', md: '3rem' },
+                fontSize: { xs: '2rem', sm: '2.5rem' },
                 fontWeight: 600,
                 boxShadow: theme.shadows[4],
+                position: 'absolute',
+                top: -50,
+                left: 32,
+                zIndex: 1,
                 transition: 'all 0.3s ease-in-out',
                 '&:hover': {
                   transform: 'scale(1.05) rotate(5deg)',
@@ -160,259 +132,142 @@ const Profile = () => {
             >
               {user.name.charAt(0)}
             </Avatar>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography 
-                variant="h4" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 700,
-                  fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
-                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                  display: 'inline-block'
-                }}
-              >
-                {user.name}
+
+            {/* Name and Edit Button Container */}
+            <Box 
+              sx={{ 
+                pt: 7,
+                pb: 3,
+                pl: { xs: 2, sm: 4 },
+                pr: { xs: 2, sm: 3 },
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 700,
+                    fontSize: { xs: '1.75rem', sm: '2.25rem' },
+                    color: 'text.primary',
+                  }}
+                >
+                  {user.name}
+                </Typography>
                 <Tooltip title="Edit Profile">
                   <IconButton 
-                    size="small" 
                     onClick={handleEditClick}
                     sx={{ 
-                      ml: 1,
+                      ml: 2,
                       color: 'primary.main',
-                      '&:hover': {
-                        transform: 'rotate(15deg)'
+                      bgcolor: 'primary.lighter',
+                      '&:hover': { 
+                        bgcolor: 'primary.light',
+                        transform: 'rotate(15deg)',
                       }
                     }}
                   >
-                    <EditIcon />
+                    <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-              </Typography>
-              <Typography 
-                variant="subtitle1" 
-                color="text.secondary"
-                sx={{ 
-                  maxWidth: '600px',
-                  mt: 1
-                }}
-              >
-                Welcome to your profile! Here you can view and manage your account settings.
-              </Typography>
-            </Box>
-          </Box>
+              </Box>
 
-          <Grid container spacing={4}>
-            {/* Email Card */}
-            <Grid item xs={12} md={6}>
-              <Card 
-                elevation={2} 
-                sx={{ 
-                  borderRadius: 3,
-                  height: '100%',
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 6,
-                    '& .MuiSvgIcon-root': {
-                      transform: 'scale(1.1)',
-                      color: 'primary.main'
-                    }
-                  }
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <EmailIcon 
-                      sx={{ 
-                        fontSize: 28, 
-                        color: 'text.secondary',
-                        transition: 'all 0.2s ease-in-out',
-                        mr: 1
-                      }} 
-                    />
-                    <Typography variant="h6" color="text.secondary">
-                      Email Address
+              {/* User Info Grid */}
+              <Grid container spacing={4}>
+                <Grid item xs={12} sm={6}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Email
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {user.email}
                     </Typography>
                   </Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 500,
-                      wordBreak: 'break-word',
-                      pl: 0.5
-                    }}
-                  >
-                    {user.email}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Member Since Card */}
-            <Grid item xs={12} md={6}>
-              <Card 
-                elevation={2} 
-                sx={{ 
-                  borderRadius: 3,
-                  height: '100%',
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': { 
-                    transform: 'translateY(-4px)',
-                    boxShadow: 6,
-                    '& .MuiSvgIcon-root': {
-                      transform: 'scale(1.1)',
-                      color: 'primary.main'
-                    }
-                  }
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <CalendarTodayIcon 
-                      sx={{ 
-                        fontSize: 28, 
-                        color: 'text.secondary',
-                        transition: 'all 0.2s ease-in-out',
-                        mr: 1
-                      }} 
-                    />
-                    <Typography variant="h6" color="text.secondary">
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
                       Member Since
                     </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {formatDate(user.createdAt)}
+                    </Typography>
                   </Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 500,
-                      pl: 0.5
-                    }}
-                  >
-                    {formatDate(user.createdAt)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Quick Links Section */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  mb: 3,
-                  color: 'text.secondary',
-                  fontWeight: 500
-                }}
-              >
-                Quick Actions
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<GroupIcon />}
-                    onClick={() => navigate('/friends')}
-                    sx={{
-                      py: 2,
-                      borderRadius: 2,
-                      borderWidth: 2,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderWidth: 2,
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    My Friends
-                  </Button>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<ReceiptLongIcon />}
-                    onClick={() => navigate('/expenses')}
-                    sx={{
-                      py: 2,
-                      borderRadius: 2,
-                      borderWidth: 2,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderWidth: 2,
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    My Expenses
-                  </Button>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<AccountBalanceWalletIcon />}
-                    onClick={() => navigate('/settlements')}
-                    sx={{
-                      py: 2,
-                      borderRadius: 2,
-                      borderWidth: 2,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderWidth: 2,
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    My Settlements
-                  </Button>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<SettingsIcon />}
-                    onClick={handlePreferencesClick}
-                    sx={{
-                      py: 2,
-                      borderRadius: 2,
-                      borderWidth: 2,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderWidth: 2,
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    Preferences
-                  </Button>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="error"
-                    startIcon={<LogoutIcon />}
-                    onClick={handleLogout}
-                    sx={{
-                      py: 2,
-                      borderRadius: 2,
-                      borderWidth: 2,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderWidth: 2,
-                        transform: 'translateY(-2px)',
-                        bgcolor: 'error.lighter'
-                      }
-                    }}
-                  >
-                    Sign Out
-                  </Button>
                 </Grid>
               </Grid>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+          </Box>
+
+          {/* Quick Actions */}
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              mb: 2,
+              color: 'text.secondary',
+              fontWeight: 500
+            }}
+          >
+            Quick Actions
+          </Typography>
+          <Grid 
+            container 
+            spacing={2}
+            sx={{
+              '& .MuiButton-root': {
+                height: '100%',
+                minHeight: 56,
+                width: '100%',
+                borderRadius: 2,
+                borderWidth: 1,
+                textTransform: 'none',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  borderWidth: 1,
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
+              }
+            }}
+          >
+            <Grid item xs={6} md={3}>
+              <Button
+                variant="outlined"
+                startIcon={<GroupIcon />}
+                onClick={() => navigate('/friends')}
+              >
+                My Friends
+              </Button>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Button
+                variant="outlined"
+                startIcon={<ReceiptLongIcon />}
+                onClick={() => navigate('/expenses')}
+              >
+                My Expenses
+              </Button>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Button
+                variant="outlined"
+                startIcon={<AccountBalanceWalletIcon />}
+                onClick={() => navigate('/settlements')}
+              >
+                My Settlements
+              </Button>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Button
+                variant="outlined"
+                startIcon={<SettingsIcon />}
+                onClick={handlePreferencesClick}
+              >
+                Settings
+              </Button>
             </Grid>
           </Grid>
         </Paper>
