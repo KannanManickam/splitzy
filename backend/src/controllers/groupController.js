@@ -11,6 +11,9 @@ const createGroup = async (req, res) => {
     const { name, description, category = 'Other', members = [] } = req.body;
     const now = new Date();
 
+    // Log request data for debugging
+    console.log('Creating group with data:', { name, description, category, members });
+
     // Remove duplicates from members array
     const uniqueMembers = [...new Set(members)];
 
@@ -83,10 +86,26 @@ const createGroup = async (req, res) => {
     res.status(201).json(result);
   } catch (error) {
     console.error('Group creation error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ message: 'Some members are already part of this group' });
     }
-    res.status(500).json({ message: 'Server error during group creation' });
+    
+    // More specific error handling
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({ message: 'One or more member IDs are invalid' });
+    }
+    
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error during group creation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -356,33 +375,47 @@ const updateGroup = async (req, res) => {
         updated_at: new Date()
       }, { transaction: t });
 
-      // Remove all existing members except the creator
-      await models.GroupMember.destroy({
-        where: {
-          group_id: group.id,
-          user_id: {
-            [models.Sequelize.Op.ne]: group.created_by
-          }
-        },
+      // Get current group members
+      const currentMembers = await models.GroupMember.findAll({
+        where: { group_id: group.id },
         transaction: t
       });
 
-      // Add members back (excluding creator as they're already in the group)
-      if (members && members.length > 0) {
-        const uniqueMembers = [...new Set(members)];
-        const memberPromises = uniqueMembers
-          .filter(memberId => memberId !== group.created_by)
-          .map(memberId =>
+      const currentMemberIds = currentMembers.map(m => m.user_id);
+      const newMemberIds = members.map(m => m.id || m);
+
+      // Find members to remove and add
+      const membersToRemove = currentMemberIds.filter(
+        id => id !== group.created_by && !newMemberIds.includes(id)
+      );
+      const membersToAdd = newMemberIds.filter(
+        id => id !== group.created_by && !currentMemberIds.includes(id)
+      );
+
+      // Remove members that are no longer in the group
+      if (membersToRemove.length > 0) {
+        await models.GroupMember.destroy({
+          where: {
+            group_id: group.id,
+            user_id: membersToRemove
+          },
+          transaction: t
+        });
+      }
+
+      // Add new members
+      if (membersToAdd.length > 0) {
+        await Promise.all(
+          membersToAdd.map(userId =>
             models.GroupMember.create({
               group_id: group.id,
-              user_id: memberId,
+              user_id: userId,
               role: 'MEMBER',
               created_at: new Date(),
               updated_at: new Date()
             }, { transaction: t })
-          );
-
-        await Promise.all(memberPromises);
+          )
+        );
       }
     });
 

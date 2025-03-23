@@ -33,6 +33,7 @@ import { groupService, Group } from '../../services/group';
 import { groupExpenseService, GroupExpense, GroupBalance } from '../../services/groupExpense';
 import { CreateGroupExpenseData } from '../../services/groupExpense';
 import { GroupExpenseFormData } from './GroupExpenseForm';
+import LoadingState from '../LoadingState';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -177,9 +178,7 @@ const GroupDetails = () => {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          {/* Add your loading component here */}
-        </Box>
+        <LoadingState type="pulse" message="Loading group details..." />
       </Container>
     );
   }

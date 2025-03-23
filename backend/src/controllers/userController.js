@@ -32,7 +32,11 @@ const register = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.created_at
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
       }
     });
   } catch (error) {
@@ -50,7 +54,21 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    const user = await models.User.findOne({ where: { email } });
+    const user = await models.User.findOne({ 
+      where: { email },
+      attributes: [
+        'id', 
+        'name', 
+        'email', 
+        'created_at',
+        'password',
+        'currency_preference',
+        'timezone',
+        'notification_preferences',
+        'profile_picture'
+      ]
+    });
+    
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -70,7 +88,11 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.created_at
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
       }
     });
   } catch (error) {
@@ -82,7 +104,16 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await models.User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email', 'created_at']
+      attributes: [
+        'id', 
+        'name', 
+        'email', 
+        'created_at',
+        'currency_preference',
+        'timezone',
+        'notification_preferences',
+        'profile_picture'
+      ]
     });
 
     if (!user) {
@@ -94,7 +125,11 @@ const getProfile = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.created_at
+        createdAt: user.created_at,
+        currency_preference: user.currency_preference,
+        timezone: user.timezone,
+        notification_preferences: user.notification_preferences,
+        profile_picture: user.profile_picture
       }
     });
   } catch (error) {

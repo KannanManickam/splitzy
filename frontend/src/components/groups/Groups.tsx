@@ -123,7 +123,9 @@ const Groups = () => {
 
     // Apply category filter
     if (filterCategory !== 'all') {
-      result = result.filter(group => group.category === filterCategory);
+      result = result.filter(group => 
+        group.category?.toLowerCase() === filterCategory.toLowerCase()
+      );
     }
 
     // Apply sorting

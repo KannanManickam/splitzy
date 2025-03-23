@@ -13,6 +13,8 @@ import {
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { getProfile } from '../../services/profile';
 import GroupIcon from '@mui/icons-material/Group';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
@@ -43,11 +45,38 @@ const formatDate = (dateString: string | undefined): string => {
 };
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const theme = useTheme();
   const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch complete user profile data only when necessary
+  useEffect(() => {
+    // Only fetch if user exists but doesn't have preference fields
+    const shouldFetchProfile = user && 
+      (user.currency_preference === undefined || 
+       user.timezone === undefined || 
+       user.notification_preferences === undefined);
+
+    const fetchUserProfile = async () => {
+      try {
+        if (shouldFetchProfile) {
+          setIsLoading(true);
+          const { user: profileData } = await getProfile();
+          updateUser(profileData);
+          console.log("Profile data fetched:", profileData);
+        }
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user, updateUser]);
 
   const handleEditClick = () => {
     setIsEditDialogOpen(true);
@@ -67,6 +96,16 @@ const Profile = () => {
 
   if (!user) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: { xs: 3, md: 6 }, mb: { xs: 3, md: 6 }, display: 'flex', justifyContent: 'center' }}>
+        <Paper sx={{ p: 3, borderRadius: 2 }}>
+          <Typography>Loading profile data...</Typography>
+        </Paper>
+      </Container>
+    );
   }
 
   return (

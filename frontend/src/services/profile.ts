@@ -28,6 +28,11 @@ export interface User {
   profile_picture?: string;
 }
 
+export const getProfile = async (): Promise<{ user: User }> => {
+  const response = await axiosInstance.get('/users/profile');
+  return response.data;
+};
+
 export const updateProfile = async (data: ProfileUpdateData): Promise<{ user: User }> => {
   const response = await axiosInstance.put('/users/profile', data);
   return response.data;

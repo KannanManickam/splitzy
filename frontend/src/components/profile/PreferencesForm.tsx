@@ -63,10 +63,12 @@ const PreferencesForm: React.FC<PreferencesFormProps> = ({ open, onClose }) => {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Initialize with default values - will be updated in useEffect
   const [preferences, setPreferences] = useState<UserPreferences>({
-    currency_preference: user?.currency_preference || 'USD',
-    timezone: user?.timezone || 'UTC',
-    notification_preferences: user?.notification_preferences || {
+    currency_preference: 'USD',
+    timezone: 'UTC',
+    notification_preferences: {
       email_notifications: true,
       expense_reminders: true,
       settlement_notifications: true,
@@ -74,19 +76,28 @@ const PreferencesForm: React.FC<PreferencesFormProps> = ({ open, onClose }) => {
     }
   });
 
-  // Reset form when dialog opens
+  // Update preferences when dialog opens or user data changes
   useEffect(() => {
-    if (open && user) {
-      setPreferences({
-        currency_preference: user.currency_preference || 'USD',
-        timezone: user.timezone || 'UTC',
-        notification_preferences: user.notification_preferences || {
-          email_notifications: true,
-          expense_reminders: true,
-          settlement_notifications: true,
-          weekly_summary: false
-        }
-      });
+    if (open) {
+      console.log("PreferencesForm opened with user data:", user);
+      
+      if (user) {
+        // Create a fresh preferences object with current user data
+        const updatedPreferences = {
+          currency_preference: user.currency_preference || 'USD',
+          timezone: user.timezone || 'UTC',
+          notification_preferences: {
+            // Use existing notification preferences or default values
+            email_notifications: user.notification_preferences?.email_notifications ?? true,
+            expense_reminders: user.notification_preferences?.expense_reminders ?? true,
+            settlement_notifications: user.notification_preferences?.settlement_notifications ?? true,
+            weekly_summary: user.notification_preferences?.weekly_summary ?? false
+          }
+        };
+        
+        setPreferences(updatedPreferences);
+      }
+      
       setError('');
     }
   }, [open, user]);

@@ -16,9 +16,14 @@ import {
   Stack,
   Avatar,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import CategoryIcon from '@mui/icons-material/Category';
 import { useAuth } from '../../contexts/AuthContext';
 import { friendService } from '../../services/friend';
 
@@ -40,6 +45,7 @@ const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: 
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Other');  // Add category state
   const [selectedMembers, setSelectedMembers] = useState<Friend[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +56,7 @@ const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: 
     if (initialData) {
       setName(initialData.name || '');
       setDescription(initialData.description || '');
+      setCategory(initialData.category || 'Other');  // Set initial category
       setSelectedMembers(initialData.members || []);
     }
     fetchFriends();
@@ -87,7 +94,8 @@ const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: 
       const groupData = {
         name: name.trim(),
         description: description.trim(),
-        members: [...selectedMembers, { id: user?.id, name: user?.name, email: user?.email }]
+        category: category,
+        members: [...selectedMembers.map(member => member.id), user?.id]
       };
 
       await onSubmit(groupData);
@@ -103,6 +111,7 @@ const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: 
   const handleClose = () => {
     setName('');
     setDescription('');
+    setCategory('Other');  // Reset category
     setSelectedMembers([]);
     setError(null);
     setNameError(null);
@@ -173,6 +182,24 @@ const GroupForm = ({ open, onClose, onSubmit, initialData, isEditing = false }: 
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What's this group about?"
             />
+
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={category}
+                label="Category"
+                onChange={(e) => setCategory(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <CategoryIcon sx={{ ml: 1, color: 'action.active' }} />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="Home">Home</MenuItem>
+                <MenuItem value="Trip">Trip</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
 
             <Box>
               <Typography 
